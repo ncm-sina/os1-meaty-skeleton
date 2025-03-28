@@ -60,6 +60,7 @@ libc.a: $(OBJS)
 	$(AR) rcs $@ $(OBJS)
 
 libk.a: $(LIBK_OBJS)
+	@echo "---building libk?: $(LIBK_OBJS)"
 	$(AR) rcs $@ $(LIBK_OBJS)
 
 .c.o:
@@ -84,8 +85,14 @@ install: install-headers install-libs
 install-headers:
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
 	cp -R --preserve=timestamps include/. $(DESTDIR)$(INCLUDEDIR)/.
+	@echo "---BINARIES: $(BINARIES)"
+	@echo "=-=-= LIBK_OBJS: $(LIBK_OBJS)"
+	@echo "=-=-= FREEOBJS: $(FREEOBJS)"
+	@echo "=-=-= ARCH_FREEOBJS: $(ARCH_FREEOBJS)"
+	
 
 install-libs: $(BINARIES)
+	@echo "==copy libs files: $(BINARIES)"
 	mkdir -p $(DESTDIR)$(LIBDIR)
 	cp $(BINARIES) $(DESTDIR)$(LIBDIR)
 

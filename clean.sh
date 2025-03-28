@@ -1,5 +1,7 @@
 #!/bin/sh
+echo "2"
 set -e
+
 . ./config.sh
 
 for PROJECT in $PROJECTS; do

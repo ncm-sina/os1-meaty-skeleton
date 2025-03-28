@@ -7,10 +7,24 @@
 
 # Declare a header as in the Multiboot Standard.
 .section .multiboot
+.global multiboot_header
 .align 4
+multiboot_header:
 .long MAGIC
 .long FLAGS
 .long CHECKSUM
+
+/* Additional fields required if certain flags are set (not used here, so filled with zeros) 
+*/
+.long 0  /* Header address (not used in this simple example) */
+.long 0  /* Load address (not used) */
+.long 0  /* Load end address (not used) */
+.long 0  /* BSS end address (not used) */
+.long 0  /* Entry address (not used) */
+.long 0  /* Extra (not used) */
+.long 0  /* Extra (not used) */
+.long 0  /* Extra (not used) */
+.long 0  /* Extra (not used) */
 
 # Reserve a stack for the initial thread.
 .section .bss
@@ -27,7 +41,7 @@ _start:
 	movl $stack_top, %esp
 
 	# Call the global constructors.
-	call _init
+	; call _init
 
 	# Transfer control to the main kernel.
 	call kernel_main
