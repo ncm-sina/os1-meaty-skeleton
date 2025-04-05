@@ -1,5 +1,4 @@
 #!/bin/sh
-echo "2"
 set -e
 
 . ./config.sh
@@ -10,4 +9,4 @@ done
 
 rm -rf sysroot
 rm -rf isodir
-rm -rf myos.iso
+rm -rf os1.iso

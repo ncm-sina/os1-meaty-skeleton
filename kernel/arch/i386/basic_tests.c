@@ -24,18 +24,18 @@ void b_test_a20(){
 }
 
 void b_test_multiboot_header(){
-	cprintf("multiboot_header[%s]: %#08x\n", "magic", multiboot_header.magic);
-	cprintf("multiboot_header[%s]: %#08x\n", "flags", multiboot_header.flags);
-	cprintf("multiboot_header[%s]: %#08x\n", "checksum", multiboot_header.checksum);
-	cprintf("multiboot_header[%s]: %#08x\n", "header_addr", multiboot_header.header_addr);
-	cprintf("multiboot_header[%s]: %#08x\n", "load_addr", multiboot_header.load_addr);
-	cprintf("multiboot_header[%s]: %#08x\n", "load_end_addr", multiboot_header.load_end_addr);
-	cprintf("multiboot_header[%s]: %#08x\n", "bss_end_addr", multiboot_header.bss_end_addr);
-	cprintf("multiboot_header[%s]: %#08x\n", "entry_addr", multiboot_header.entry_addr);
-	cprintf("multiboot_header[%s]: %#08x\n", "mode_type", multiboot_header.mode_type);
-	cprintf("multiboot_header[%s]: %#08x\n", "width", multiboot_header.width);
-	cprintf("multiboot_header[%s]: %#08x\n", "height", multiboot_header.height);
-	cprintf("multiboot_header[%s]: %#08x\n", "depth", multiboot_header.depth);
+	// cprintf("multiboot_header[%s]: %#08x\n", "magic", multiboot_header.magic);
+	// cprintf("multiboot_header[%s]: %#08x\n", "flags", multiboot_header.flags);
+	// cprintf("multiboot_header[%s]: %#08x\n", "checksum", multiboot_header.checksum);
+	// cprintf("multiboot_header[%s]: %#08x\n", "header_addr", multiboot_header.header_addr);
+	// cprintf("multiboot_header[%s]: %#08x\n", "load_addr", multiboot_header.load_addr);
+	// cprintf("multiboot_header[%s]: %#08x\n", "load_end_addr", multiboot_header.load_end_addr);
+	// cprintf("multiboot_header[%s]: %#08x\n", "bss_end_addr", multiboot_header.bss_end_addr);
+	// cprintf("multiboot_header[%s]: %#08x\n", "entry_addr", multiboot_header.entry_addr);
+	// cprintf("multiboot_header[%s]: %#08x\n", "mode_type", multiboot_header.mode_type);
+	// cprintf("multiboot_header[%s]: %#08x\n", "width", multiboot_header.width);
+	// cprintf("multiboot_header[%s]: %#08x\n", "height", multiboot_header.height);
+	// cprintf("multiboot_header[%s]: %#08x\n", "depth", multiboot_header.depth);
 }
 
 void b_test_mconio(){

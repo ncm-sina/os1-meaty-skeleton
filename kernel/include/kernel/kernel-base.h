@@ -21,4 +21,12 @@ extern MULTIBOOT_HEADER multiboot_header;
 // Declare the assembly function as extern
 extern int is_A20_on(void);
 
+extern uint32_t _kernel_start;
+extern uint32_t _kernel_bss_end;
+extern uint32_t _kernel_end;
+
+static inline void halt(void) {
+    asm volatile ("cli; hlt");  // Halt CPU safely
+}
+
 #endif

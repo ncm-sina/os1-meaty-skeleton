@@ -12,8 +12,6 @@
 extern "C" {
 #endif
 
-__attribute__((__noreturn__))
-
 void clrscr(void);
 void sprintf(char *output, const char *fstring, ...); // copies formated string to output string////
 void cprintf(const char* fstring, ...); // Variadic with ANSI color support

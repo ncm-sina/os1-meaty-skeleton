@@ -30,3 +30,6 @@
 *.iso
 isodir
 sysroot
+
+# crash file created by gdb
+*.core
