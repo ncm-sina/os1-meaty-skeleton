@@ -18,34 +18,50 @@
 #include <kernel/vga_basic.h>
 #include <kernel/mcpuid.h>
 #include <kernel/paging.h>
+#include <kernel/idt.h>
+#include <kernel/isrs/all.h>
+#include <kernel/drivers/all.h>
 
 #include <kernel/kernel-base.h>
 
-// Static function to hide the cursor using port I/O
-static void _hide_cursor(void) {
-    outb(0x3D4, 0x0A);
-    outb(0x3D5, 0x20); // Disable cursor
+
+static void init_drivers(){
+    timer_drv.init();
+    keyboard_drv.init();    
 }
 
 // Kernel initialization
-static void kernel_init(/*multiboot_info_t* mbi*/) {
+static void kernel_init(multiboot_info_t* mbi) {
     _hide_cursor();
+    init_paging(mbi);
+
+    // Initialize IDT (sets up exceptions and IRQs)
+    idt_init();
+    init_drivers();
+
     clrscr();
-    // init_paging(mbi);    
+
 
 }
 
 // Kernel main function
 void kernel_main(multiboot_info_t* mbi) {
-    kernel_init(/*mbi*/);
-    cprintf("flags=%08X, mem_lower=%08X, mem_upper=%08X, boot_device=%08X \n", mbi->flags, mbi->mem_lower, mbi->mem_upper, mbi->boot_device);
-    cprintf("cmdline=%08X, mods_count=%08X, mods_addr=%08X, syms=%08X \n", mbi->cmdline, mbi->mods_count, mbi->mods_addr, mbi->syms);
-    cprintf("mmap_length=%08X, mmap_addr=%08X \n", mbi->mmap_length, mbi->mmap_addr);
-    cprintf("\n");
-    b_test_mconio();
+    kernel_init(mbi);
+
+    b_test_isr_driver();
+    // b_test_idt();
+    // b_test_mbi(mbi);
+    // b_test_mconio();
     // b_test_mconio_scroll();    
     // b_test_a20();
     // b_test_multiboot_header();
-    b_test_cupid();
+    // b_test_cupid();
+    // b_test_mconio();
+    // // b_test_mconio_scroll();    
+    // // b_test_a20();
+    // // b_test_multiboot_header();
+    // b_test_cupid();
+
+
     halt();      // while(1);
 }

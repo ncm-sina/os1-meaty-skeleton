@@ -6,6 +6,10 @@
 #include <kernel/mport.h>
 #include <kernel/vga_basic.h>
 #include <kernel/mcpuid.h>
+#include <kernel/paging.h>
+#include <kernel/idt.h>
+#include <kernel/isrs/all.h>
+#include <kernel/drivers/all.h>
 
 #include <kernel/kernel-base.h>
 #include <kernel/basic_tests.h>
@@ -17,6 +21,56 @@ char _b_test_c = '!';
 int _b_test_negative = -123;
 unsigned int _b_test_hex_val = 28; // 0x1c
 
+void b_test_isr_driver(){
+    cprintf("\n\n");
+    cprintf("Kernel Loaded\n");
+    cprintf("IDT Offset: %08X\n", idt_desc.offset);
+    cprintf("IDT Size: %08X\n", idt_desc.size);
+    uint32_t eflags;
+    asm volatile("pushf; pop %0" : "=r"(eflags));
+    cprintf("EFLAGS: %08X\n", eflags);
+    cprintf("Initial Ticks: %08X\n", timer_drv.get_ticks());
+
+    uint32_t last_tick = timer_drv.get_ticks();
+    while (1) {
+        uint32_t current_tick = timer_drv.get_ticks();
+        struct key_event event;
+        if (keyboard_drv.get_event(&event)) {
+            _vgab_set_cursor(0, 1);
+            cprintf("Key: %04X  Type: %d  Mod: %02X  ",
+                    event.code, event.type, event.modifiers);
+        }
+        if (current_tick != last_tick) {
+            last_tick = current_tick;
+            _vgab_set_cursor(0, 0);
+            cprintf("Ticks: %08X", current_tick);
+        }
+    }    
+}
+
+void b_test_idt(){
+    // needs work not a proper test
+    // cprintf("\n\n"); // Couple of enters at the start
+    // cprintf("Kernel Loaded\n");
+    // cprintf("IDT Offset: %08X\n", idt_desc.offset);
+    // cprintf("IDT Size: %08X\n", idt_desc.size);
+    // uint32_t eflags;
+    // asm volatile("pushf; pop %0" : "=r"(eflags));
+    // cprintf("EFLAGS: %08X\n", eflags);
+    // Inspect IDT entry 32
+    // uint32_t isr32_addr = (idt[32].offset_high << 16) | idt[32].offset_low;
+    // cprintf("IDT[32] Address: %08X\n", isr32_addr);
+    // cprintf("IDT[32] Selector: %04X\n", idt[32].selector);
+    // cprintf("IDT[32] Type_Attr: %02X\n", idt[32].type_attr);    
+
+}
+
+void b_test_mbi(multiboot_info_t* mbi){
+    cprintf("flags=%08X, mem_lower=%08X, mem_upper=%08X, boot_device=%08X \n", mbi->flags, mbi->mem_lower, mbi->mem_upper, mbi->boot_device);
+    cprintf("cmdline=%08X, mods_count=%08X, mods_addr=%08X, syms=%08X \n", mbi->cmdline, mbi->mods_count, mbi->mods_addr, mbi->syms);
+    cprintf("mmap_length=%08X, mmap_addr=%08X \n", mbi->mmap_length, mbi->mmap_addr);
+    cprintf("\n");
+}
 
 void b_test_a20(){
 	int r = is_A20_on();

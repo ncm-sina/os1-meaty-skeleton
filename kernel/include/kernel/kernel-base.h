@@ -29,4 +29,10 @@ static inline void halt(void) {
     asm volatile ("cli; hlt");  // Halt CPU safely
 }
 
+// Static function to hide the cursor using port I/O
+static void _hide_cursor(void) {
+    outb(0x3D4, 0x0A);
+    outb(0x3D5, 0x20); // Disable cursor
+}
+
 #endif

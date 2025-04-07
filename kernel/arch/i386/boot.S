@@ -32,7 +32,9 @@ _start:
 
     /* Load GDT */
     lgdt gdt_descriptor
+    ljmp $0x08, $gdt_loaded
 
+gdt_loaded:
     /* Set up page table: map physical 0x0 - 0x400000 */
     movl $pagetable, %edi
     movl $0, %eax
@@ -135,7 +137,7 @@ gdt_start:
 gdt_end:
 gdt_descriptor:
     .word gdt_end - gdt_start - 1
-    .long gdt_start
+    .long gdt_start /*+ 0xC0000000*/  /* Virtual address post-paging */
 
 .global multiboot_info
 multiboot_info: .long 0

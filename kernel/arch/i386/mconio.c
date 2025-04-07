@@ -49,7 +49,7 @@ static void itohex(unsigned int num, char *buf, int uppercase, int width, bool u
         }
     }
 
-    int prefix_len = use_prefix ? 2 : 0; // "0x" or "0X" if prefix is used
+    // int prefix_len = use_prefix ? 2 : 0; // "0x" or "0X" if prefix is used
     int hex_len = i; // Number of actual hex digits
     int total_len = hex_len > width ? hex_len : width; // Total length including padding
     int start = 0;

@@ -1,6 +1,10 @@
 #ifndef _KERNEL_MCPUID_H
 #define _KERNEL_MCPUID_H
 
+
+void b_test_isr_driver();
+void b_test_idt();
+void b_test_mbi(multiboot_info_t* mbi);
 void b_test_a20();
 void b_test_multiboot_header();
 void b_test_mconio();
