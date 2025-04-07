@@ -1,6 +1,7 @@
 #ifndef _KERNEL_MCPUID_H
 #define _KERNEL_MCPUID_H
 
+#include <kernel/paging.h>
 
 void b_test_isr_driver();
 void b_test_idt();

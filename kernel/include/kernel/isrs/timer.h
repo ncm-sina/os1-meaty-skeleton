@@ -3,9 +3,11 @@
 
 #include <stdint.h>
 
-extern volatile int isr_timer_tick_flag;
+extern volatile int isr_timer_tick_flag; // Flag indicating a timer tick
 
-void isr_timer(void);
-void isr_timer_register_handler(void (*handler)(void));
+// ISR entry point for timer interrupt (IRQ0)
+extern void isr_timer(void);
+// Function to register a handler for timer ticks
+extern void isr_timer_register_handler(void (*handler)(void));
 
 #endif

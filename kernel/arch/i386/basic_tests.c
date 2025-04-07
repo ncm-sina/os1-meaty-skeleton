@@ -36,9 +36,15 @@ void b_test_isr_driver(){
         uint32_t current_tick = timer_drv.get_ticks();
         struct key_event event;
         if (keyboard_drv.get_event(&event)) {
+            char ascii = keyboard_drv.keycode_to_ascii(event.code, event.modifiers);
             _vgab_set_cursor(0, 1);
-            cprintf("Key: %04X  Type: %d  Mod: %02X  ",
-                    event.code, event.type, event.modifiers);
+            cprintf("Key: %04X  Type: %d  Mod: %02X  ASCII: %c  ",
+                    event.code, event.type, event.modifiers, ascii ? ascii : ' ');
+            // Clear buffer on Enter press (for demo)
+            if (event.code == KEY_ENTER && event.type == KEY_PRESS) {
+                keyboard_drv.clear_buffer();
+                cprintf("\nBuffer cleared\n");
+            }
         }
         if (current_tick != last_tick) {
             last_tick = current_tick;
