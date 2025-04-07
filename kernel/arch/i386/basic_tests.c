@@ -21,8 +21,39 @@ char _b_test_c = '!';
 int _b_test_negative = -123;
 unsigned int _b_test_hex_val = 28; // 0x1c
 
+void b_test_fpu(){
+    // Test FPU
+    float test = 2.5 * 1.2;
+    cprintf("FPU Test: 2.5 * 1.2 = %d.%02d\n", (int)test, (int)((test - (int)test) * 100));    
+}
+
+// Test floating-point formatting
+void b_test_floating_point(void) {
+    float pi_float = 3.14159f;
+    double pi_double = 3.14159265359;
+    float neg_float = -42.567f;
+    double small_double = 0.000123456789;
+
+    // Default %f (6 digits)
+    cprintf("Pi (float): %f", pi_float);         // "3.141590"
+    cprintf("Pi (double): %f", pi_double);       // "3.141593"
+
+    // Width and precision
+    cprintf("Pi (6.2f): %6.2f", pi_double);      // "  3.14"
+    cprintf("Neg (8.3f): %8.3f", neg_float);     // " -42.567"
+    cprintf("Small (10.8f): %10.8f", small_double); // " 0.00012346"
+
+    // Zero precision
+    cprintf("Pi (0f): %.0f", pi_double);         // "3"
+
+    // Sprintf test
+    char test_buffer[64];
+    sprintf(test_buffer, "Float test: %7.4f", pi_float);
+    printf("Sprintf float: %s", test_buffer);    // "Float test:  3.1416"
+}
+
 void b_test_isr_driver(){
-    cprintf("\n\n");
+    cprintf("\n\n\n\n");
     cprintf("Kernel Loaded\n");
     cprintf("IDT Offset: %08X\n", idt_desc.offset);
     cprintf("IDT Size: %08X\n", idt_desc.size);

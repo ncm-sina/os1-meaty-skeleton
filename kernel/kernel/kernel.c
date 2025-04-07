@@ -48,6 +48,7 @@ static void kernel_init(multiboot_info_t* mbi) {
 void kernel_main(multiboot_info_t* mbi) {
     kernel_init(mbi);
 
+    // b_test_fpu();
     b_test_isr_driver();
     // b_test_idt();
     // b_test_mbi(mbi);

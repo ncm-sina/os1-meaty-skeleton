@@ -70,6 +70,77 @@ static void itohex(unsigned int num, char *buf, int uppercase, int width, bool u
     buf[start + total_len] = '\0';
 }
 
+// Helper function to convert a double to a string with specified width and precision
+static void dtoaf(double num, char *buf, int width, int precision) {
+    int i = 0;
+    if (num < 0) {
+        buf[i++] = '-';
+        num = -num;
+    }
+
+    // Integer part
+    int int_part = (int)num;
+    double frac_part = num - (double)int_part;
+
+    // Convert integer part
+    char int_buf[12];
+    itoa(int_part, int_buf);
+    int int_len = 0;
+    while (int_buf[int_len]) int_len++;
+
+    // Calculate total length (sign + integer + decimal + precision)
+    int sign_len = (num < 0) ? 1 : 0;
+    int total_min_len = sign_len + int_len + 1 + precision; // sign + integer + '.' + precision
+    int pad_len = (width > total_min_len) ? (width - total_min_len) : 0;
+
+    // Add padding spaces
+    for (int j = 0; j < pad_len; j++) {
+        buf[i++] = ' ';
+    }
+
+    // Copy integer part
+    char *p = int_buf;
+    while (*p) {
+        buf[i++] = *p++;
+    }
+
+    // Decimal point
+    buf[i++] = '.';
+
+    // Fractional part
+    if (precision == 0) {
+        buf[i] = '\0';
+        return;
+    }
+
+    // Multiply by 10^precision and round
+    double multiplier = 1.0;
+    for (int j = 0; j < precision; j++) {
+        multiplier *= 10.0;
+    }
+    int frac_int = (int)(frac_part * multiplier + 0.5);
+
+    if (frac_int == 0) {
+        for (int j = 0; j < precision; j++) {
+            buf[i++] = '0';
+        }
+    } else {
+        char frac_buf[16]; // Enough for large precision
+        itoa(frac_int, frac_buf);
+        int len = 0;
+        while (frac_buf[len]) len++;
+        for (int j = 0; j < precision - len; j++) {
+            buf[i++] = '0'; // Leading zeros
+        }
+        p = frac_buf;
+        while (*p) {
+            buf[i++] = *p++;
+        }
+    }
+
+    buf[i] = '\0';
+}
+
 // Static function to format a string with arguments into output buffer
 static void format_string(char *output, const char *fstring, va_list args) {
     char *out = output;
@@ -80,15 +151,27 @@ static void format_string(char *output, const char *fstring, va_list args) {
 
             bool use_prefix = false;
             int width = 0;
+            int precision = 6; // Default precision for %f
 
             if (*fstring == '#') {
                 use_prefix = true;
                 fstring++;
             }
 
+            // Parse width (e.g., "6" in "%6.2f")
             while (*fstring >= '0' && *fstring <= '9') {
                 width = width * 10 + (*fstring - '0');
                 fstring++;
+            }
+
+            // Parse precision (e.g., "2" in "%6.2f")
+            if (*fstring == '.') {
+                fstring++;
+                precision = 0; // Reset default if '.' is present
+                while (*fstring >= '0' && *fstring <= '9') {
+                    precision = precision * 10 + (*fstring - '0');
+                    fstring++;
+                }
             }
 
             switch (*fstring) {
@@ -126,6 +209,14 @@ static void format_string(char *output, const char *fstring, va_list args) {
                     char hex_buf[11];
                     itohex(num, hex_buf, 1, width, use_prefix);
                     char *p = hex_buf;
+                    while (*p) *out++ = *p++;
+                    break;
+                }
+                case 'f': {
+                    double num = va_arg(args, double);
+                    char float_buf[32];
+                    dtoaf(num, float_buf, width, precision);
+                    char *p = float_buf;
                     while (*p) *out++ = *p++;
                     break;
                 }

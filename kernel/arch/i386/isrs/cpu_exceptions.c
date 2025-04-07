@@ -1,5 +1,8 @@
 #include <kernel/isrs/cpu_exceptions.h>
+#include <kernel/fpu.h>
+
 #include <kernel/mconio.h>
+
 
 void isr_divide_error(void) {
     cprintf("Divide by zero error\n");
@@ -32,7 +35,13 @@ void isr_invalid_opcode(void) {
 }
 
 void isr_device_not_available(void) {
-    cprintf("Device not available\n");
+    if (!is_fpu_enabled()) {
+        cprintf("FPU not enabled, enabling now...\n");
+        enable_fpu(); // Enable FPU on demand (for simplicity now)
+    } else {
+        cprintf("Unexpected FPU exception (ISR 7)\n");
+        // In a multitasking OS, this would switch FPU context
+    }
 }
 
 void isr_double_fault(uint32_t error_code) {
