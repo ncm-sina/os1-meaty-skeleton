@@ -3,7 +3,7 @@
 
 #include <kernel/paging.h>
 
-void b_test_fpu();
+void b_test_mouse(void);
 void b_test_floating_point(void);
 void b_test_isr_driver();
 void b_test_idt();

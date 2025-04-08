@@ -55,6 +55,8 @@ typedef struct {
 } CORDS;
 
 // Function prototypes (all static, prefixed with _vgab_)
+void _vgab_get_char_at(int16_t x, int16_t y, uint8_t *ch, uint8_t *attrib); // prints ch at x,y with attr attrib
+void _vgab_put_char_at(int16_t x, int16_t y, uint8_t ch, uint8_t attrib); // prints ch at x,y with attr attrib
 void _vgab_put_char(char c); // prints a character at curx, curx using current text attribute
 void _vgab_write_string(const char *str); // prints a string at curx, cury using current text attribute
 void _vgab_scroll(uint8_t step); // would scroll step lines

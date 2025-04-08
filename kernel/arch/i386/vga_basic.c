@@ -15,6 +15,16 @@ static VGAB_TEXTINFO vgab_textinfo = {
     .tabsize = 8                                                // Default tab size
 };
 
+void _vgab_get_char_at(int16_t x, int16_t y, uint8_t *ch, uint8_t *attrib){ // prints ch at x,y with attr attrib
+    *ch = VGA_MEMORY[y * vgab_textinfo.screenwidth + x].character;
+    *attrib = VGA_MEMORY[y * vgab_textinfo.screenwidth + x].attribute;
+}
+
+void _vgab_put_char_at(int16_t x, int16_t y, uint8_t ch, uint8_t attrib){
+    VGA_MEMORY[y * vgab_textinfo.screenwidth + x] = 
+    (VGA_MEMORY_ENTRY){.character = ch, .attribute = attrib};
+}
+
 // Print a character at current cursor position using current attribute
 void _vgab_put_char(char c) {
     if (vgab_textinfo.curx >= vgab_textinfo.screenwidth || vgab_textinfo.cury >= vgab_textinfo.screenheight) return;

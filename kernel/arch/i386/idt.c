@@ -9,24 +9,24 @@
 struct idt_entry idt[IDT_ENTRIES];
 struct idt_descriptor idt_desc = {
     .size = sizeof(idt) - 1,
-    .offset = (uint32_t)&idt + 0xC0000000
+    .offset = (uint32_t)&idt + 0xC0000000 // Assuming your kernel base
 };
 
 extern void idt_load(uint32_t idt_desc_addr);
 extern void isr_default(void);
 extern void isr0(void), isr1(void), isr2(void), isr3(void), isr4(void), isr5(void),
          isr6(void), isr7(void), isr8(void), isr10(void), isr11(void), isr12(void),
-         isr13(void), isr14(void), isr32(void), isr33(void);
+         isr13(void), isr14(void), isr32(void), isr33(void), isr44(void); // Added isr44
 
 void *isr_stubs[IDT_ENTRIES];
 
 static void pic_remap(void) {
-    outb(0x20, 0x11); outb(0xA0, 0x11);
-    outb(0x21, 0x20); outb(0xA1, 0x28);
-    outb(0x21, 0x04); outb(0xA1, 0x02);
-    outb(0x21, 0x01); outb(0xA1, 0x01);
-    outb(0x21, 0xFC); // Unmask IRQ0, IRQ1
-    outb(0xA1, 0xFF);
+    outb(0x20, 0x11); outb(0xA0, 0x11); // ICW1: Initialize PICs
+    outb(0x21, 0x20); outb(0xA1, 0x28); // ICW2: Base vectors (32, 40)
+    outb(0x21, 0x04); outb(0xA1, 0x02); // ICW3: Master/Slave wiring
+    outb(0x21, 0x01); outb(0xA1, 0x01); // ICW4: 8086 mode
+    outb(0x21, 0xF8); // Unmask IRQ0 (timer), IRQ1 (keyboard), IRQ2 (cascade)
+    outb(0xA1, 0xEF); // Unmask IRQ12 (mouse), mask others
 }
 
 void isr_handler(uint32_t vector, uint32_t error_code) {
@@ -52,6 +52,7 @@ void isr_handler(uint32_t vector, uint32_t error_code) {
         switch (vector) {
             case 32: isr_timer(); break;    // IRQ0: Timer
             case 33: isr_keyboard(); break; // IRQ1: Keyboard
+            case 44: isr_mouse(); break;    // IRQ12: Mouse
             default: cprintf("Unhandled IRQ: %d\n", vector); break;
         }
         if (vector >= 40)
@@ -87,6 +88,7 @@ void idt_init(void) {
     isr_stubs[14] = isr14;
     isr_stubs[32] = isr32; // Timer ISR
     isr_stubs[33] = isr33; // Keyboard ISR
+    isr_stubs[44] = isr44; // Mouse ISR
 
     for (int i = 0; i < IDT_ENTRIES; i++) {
         if (!isr_stubs[i]) isr_stubs[i] = isr_default;

@@ -21,10 +21,57 @@ char _b_test_c = '!';
 int _b_test_negative = -123;
 unsigned int _b_test_hex_val = 28; // 0x1c
 
-void b_test_fpu(){
-    // Test FPU
-    float test = 2.5 * 1.2;
-    cprintf("FPU Test: 2.5 * 1.2 = %d.%02d\n", (int)test, (int)((test - (int)test) * 100));    
+
+void b_test_mouse(void){
+    // Mouse Tests
+    cprintf("\n\n\nMouse Tests:\n");
+    cprintf("Initial X: %d, Y: %d, Buttons: %02X\n", 
+            mouse_drv.get_x(), mouse_drv.get_y(), mouse_drv.get_buttons());
+
+    // Test 1: Set speed and move mouse
+    mouse_drv.set_speed(20); // Double normal speed
+    cprintf("Set speed to 20 (2x normal)\n");
+
+    // Test 2: Set resolution
+    mouse_drv.set_resolution(2); // 4 counts/mm
+    cprintf("Set resolution to 2 (4 counts/mm)\n");
+
+    // Test 3: Set sample rate
+    mouse_drv.set_sample_rate(100); // 100 packets/sec
+    cprintf("Set sample rate to 100 packets/sec\n");
+
+    // Test 4: Disable and re-enable mouse
+    mouse_drv.disable_mouse();
+    cprintf("Mouse disabled (move it, no updates)\n");
+    for (volatile int i = 0; i < 10000000; i++); // Delay to observe
+    mouse_drv.enable_mouse();
+    cprintf("Mouse re-enabled\n");
+
+    uint32_t last_tick = timer_drv.get_ticks();
+    int32_t last_x = mouse_drv.get_x();
+    int32_t last_y = mouse_drv.get_y();
+    uint8_t last_buttons = mouse_drv.get_buttons();
+    int counter=0;
+    while (1) {
+        counter ++;
+
+        uint32_t current_tick = timer_drv.get_ticks();
+        struct key_event event;
+
+        int32_t x = mouse_drv.get_x();
+        int32_t y = mouse_drv.get_y();
+        uint8_t buttons = mouse_drv.get_buttons();
+        int32_t dx = mouse_drv.get_dx();
+        int32_t dy = mouse_drv.get_dy();
+        if (x != last_x || y != last_y || buttons != last_buttons || 1) {
+            last_x = x;
+            last_y = y;
+            last_buttons = buttons;
+            _vgab_set_cursor(0, 0);
+            cprintf("c:%08X Mouse X: %04d  Y: %04d  Buttons: %02X  DX: %04d  DY: %04d  ", counter, 
+                    x, y, buttons, dx, dy);
+        }
+    }    
 }
 
 // Test floating-point formatting
