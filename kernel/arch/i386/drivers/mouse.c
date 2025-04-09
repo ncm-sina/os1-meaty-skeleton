@@ -70,11 +70,11 @@ static void mouse_handle_data(uint8_t data) {
         float y_factor = ((float)_mouse_data.speed / MOUSE_NORMAL_SPEED) * 
         ((float)_mouse_data.screen_height / SCREEN_HEIGHT_BASELINE);
 
-        _mouse_data.last_dx = raw_dx * x_factor;
-        _mouse_data.last_dy = raw_dy * y_factor;
+        _mouse_data.last_dx = (float)raw_dx * x_factor;
+        _mouse_data.last_dy = (float)raw_dy * y_factor;
 
-        _mouse_data.x += (int32_t)_mouse_data.last_dx;
-        _mouse_data.y += (int32_t)_mouse_data.last_dy;
+        _mouse_data.x += (float)_mouse_data.last_dx;
+        _mouse_data.y += (float)_mouse_data.last_dy;
 
         // Clamp to screen bounds
         if (_mouse_data.x < 0) _mouse_data.x = 0;

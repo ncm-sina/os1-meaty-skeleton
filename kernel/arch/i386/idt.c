@@ -9,7 +9,7 @@
 struct idt_entry idt[IDT_ENTRIES];
 struct idt_descriptor idt_desc = {
     .size = sizeof(idt) - 1,
-    .offset = (uint32_t)&idt + 0xC0000000 // Assuming your kernel base
+    .offset = (uint32_t)&idt 
 };
 
 extern void idt_load(uint32_t idt_desc_addr);

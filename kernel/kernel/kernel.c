@@ -34,7 +34,7 @@ static void init_drivers(){
 // Kernel initialization
 static void kernel_init(multiboot_info_t* mbi) {
     _hide_cursor();
-    init_paging(mbi);
+    // init_paging(mbi);
 
     // Initialize IDT (sets up exceptions and IRQs)
     idt_init();

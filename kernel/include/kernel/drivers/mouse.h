@@ -10,8 +10,8 @@
 #define DEFAULT_SCREEN_WIDTH  80   // Text mode default
 #define DEFAULT_SCREEN_HEIGHT 25   // Text mode default
 #define MIN_SCREEN_SIZE       10
-#define SCREEN_WIDTH_BASELINE 102 // Baseline for scaling
-#define SCREEN_HEIGHT_BASELINE 72 // Baseline for scaling
+#define SCREEN_WIDTH_BASELINE 100 // Baseline for scaling
+#define SCREEN_HEIGHT_BASELINE 70 // Baseline for scaling
 
 #define MOUSE_BUFFER_SIZE 3 // Standard PS/2 mouse sends 3-byte packets
 #define MOUSE_TIMEOUT 20000000 // Timeout for wait functions (~1ms at 1GHz)
@@ -19,8 +19,8 @@
 typedef struct mouse_data_t {
     int8_t buffer[MOUSE_BUFFER_SIZE];
     int8_t cycle;          // Tracks packet byte position (0-2)
-    int32_t x;              // Absolute X position
-    int32_t y;              // Absolute Y position
+    float x;              // Absolute X position
+    float y;              // Absolute Y position
     float last_dx;          // Last X delta (float for precision)
     float last_dy;          // Last Y delta (float for precision)
     int8_t buttons;        // Button states

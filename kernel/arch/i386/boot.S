@@ -1,9 +1,14 @@
 /* Multiboot constants */
 .set ALIGN,    1<<0             /* Align modules on page boundaries */
 .set MEMINFO,  1<<1             /* Request memory map from GRUB */
+.set PAGING,  1<<1             /* Request memory map from GRUB */
 .set FLAGS,    ALIGN | MEMINFO  /* Combined flags */
 .set MAGIC,    0x1BADB002       /* Multiboot magic number */
 .set CHECKSUM, -(MAGIC + FLAGS) /* Checksum for validation */
+
+# Kernel virtual base address
+.set KERNEL_VIRT_BASE, 0xC0000000
+.set KERNEL_PAGE_DIR,  (page_directory - KERNEL_VIRT_BASE)
 
 /* Multiboot header for GRUB */
 .section .multiboot
@@ -28,15 +33,10 @@ multiboot_header:
 .section .text
 .global _start
 _start:
-	movl %ebx, multiboot_info
+	movl %ebx, multiboot_info - KERNEL_VIRT_BASE
 
-    /* Load GDT */
-    lgdt gdt_descriptor
-    ljmp $0x08, $gdt_loaded
-
-gdt_loaded:
     /* Set up page table: map physical 0x0 - 0x400000 */
-    movl $pagetable, %edi
+    movl $pagetable - KERNEL_VIRT_BASE, %edi
     movl $0, %eax
     movl $1024, %ecx
 1:  orl  $3, %eax
@@ -46,25 +46,31 @@ gdt_loaded:
     loop 1b
 
     /* Set up page directory */
-    movl $pagedir, %edi
-    movl $pagetable, %eax
+    movl $pagedir - KERNEL_VIRT_BASE, %edi
+    movl $pagetable - KERNEL_VIRT_BASE, %eax
     orl  $3, %eax
     movl %eax, (%edi)           /* PDE 0: 0x0 - 0x400000 */
     movl %eax, 768*4(%edi)      /* PDE 768: 0xC0000000 - 0xC0400000 */
 
     /* Enable paging */
-    movl $pagedir, %eax
+    movl $pagedir - KERNEL_VIRT_BASE, %eax
     movl %eax, %cr3
     movl %cr0, %eax
     orl  $0x80000000, %eax
     movl %eax, %cr0
 
     /* Far jump to higher half */
-	movl $0xC0000000, %eax
-	addl $higher_half, %eax
+	mov $higher_half, %eax
     jmp *%eax
 
 higher_half:
+
+    /* Load GDT */
+    lgdt gdt_descriptor
+    ljmp $0x08, $gdt_loaded
+
+gdt_loaded:
+
     movw $0x10, %ax
     movw %ax, %ds
     movw %ax, %es
@@ -84,7 +90,7 @@ higher_half:
 /* Blue Death Screen: Sets blue background, prints message, restarts */
 blue_death_screen:
     /* Clear screen with blue background (VGA text mode at 0xC00B8000) */
-    ; movl $0xC00B8000, %edi       /* VGA buffer virtual address */
+    /* movl $0xC00B8000, %edi        VGA buffer virtual address */
     movl $0xB8000, %edi       /* VGA buffer virtual address */
     movl $2000, %ecx             /* 80x25 = 2000 characters */
     movw $0x1720, %ax            /* Blue background (0x17), space char (0x20) */
@@ -135,9 +141,10 @@ gdt_start:
     .byte 0xCF
     .byte 0x00
 gdt_end:
+.align 16
 gdt_descriptor:
     .word gdt_end - gdt_start - 1
-    .long gdt_start /*+ 0xC0000000*/  /* Virtual address post-paging */
+    .long gdt_start 
 
 .global multiboot_info
 multiboot_info: .long 0
