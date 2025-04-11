@@ -1,7 +1,6 @@
 /* Multiboot constants */
 .set ALIGN,    1<<0             /* Align modules on page boundaries */
 .set MEMINFO,  1<<1             /* Request memory map from GRUB */
-.set PAGING,  1<<1             /* Request memory map from GRUB */
 .set FLAGS,    ALIGN | MEMINFO  /* Combined flags */
 .set MAGIC,    0x1BADB002       /* Multiboot magic number */
 .set CHECKSUM, -(MAGIC + FLAGS) /* Checksum for validation */
@@ -81,7 +80,7 @@ gdt_loaded:
     movl $stack_top, %esp
     pushl multiboot_info
     call kernel_main
-    call blue_death_screen
+    call blue_death_screen /* this should never be called. unless something goes wrong */
     cli
 1:  hlt
     jmp  1b
@@ -90,14 +89,14 @@ gdt_loaded:
 /* Blue Death Screen: Sets blue background, prints message, restarts */
 blue_death_screen:
     /* Clear screen with blue background (VGA text mode at 0xC00B8000) */
-    /* movl $0xC00B8000, %edi        VGA buffer virtual address */
+    /* movl $0xC00B8000, %edi        VGA buffer virtual address - also works */
     movl $0xB8000, %edi       /* VGA buffer virtual address */
     movl $2000, %ecx             /* 80x25 = 2000 characters */
     movw $0x1720, %ax            /* Blue background (0x17), space char (0x20) */
     rep  stosw                   /* Fill screen (2 bytes per char: attr + char) */
 
     /* Print "KERNEL PANIC" at top-left */
-    ; movl $0xC00B8000, %edi       /* Reset EDI to VGA start */
+    ; movl $0xC00B8000, %edi       /* Reset EDI to VGA start - also works */
     movl $0xB8000, %edi       /* Reset EDI to VGA start */
     add $1610, %edi       /* Reset EDI to VGA start */
     movl $panic_msg, %esi        /* Source string address */
@@ -149,7 +148,10 @@ gdt_descriptor:
 .global multiboot_info
 multiboot_info: .long 0
 panic_msg: .ascii "KERNEL PANIC"
-
+.global pagetables_phys_start
+pagetables_phys_start: .long 0
+.global pagetables_virt_start
+pagetables_virt_start: .long 0xFFC00000
 /* BSS */
 .section .bss
 .align 4096
@@ -157,5 +159,11 @@ panic_msg: .ascii "KERNEL PANIC"
 pagedir: .skip 4096
 .global pagetable
 pagetable: .skip 4096
+.global pagetables_pagetable
+pagetables_pagetable: .skip 4096
+.global tmppage
+tmppage: .skip 4096
+.global templatePage
+templatePage: .skip 4096
 stack_bottom: .skip 16384
 stack_top:

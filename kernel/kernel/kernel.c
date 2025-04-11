@@ -34,7 +34,7 @@ static void init_drivers(){
 // Kernel initialization
 static void kernel_init(multiboot_info_t* mbi) {
     _hide_cursor();
-    // init_paging(mbi);
+    init_paging(mbi);
 
     // Initialize IDT (sets up exceptions and IRQs)
     idt_init();
@@ -44,6 +44,8 @@ static void kernel_init(multiboot_info_t* mbi) {
     // mouse_drv.set_speed(20); // Faster movement
     // mouse_drv.set_resolution(1); // 2 counts/mm
     // mouse_drv.set_sample_rate(100); // 100 Hz    
+
+    
 
     clrscr();
 

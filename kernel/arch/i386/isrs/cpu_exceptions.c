@@ -1,6 +1,6 @@
 #include <kernel/isrs/cpu_exceptions.h>
+#include <kernel/paging.h>
 #include <kernel/fpu.h>
-
 #include <kernel/mconio.h>
 
 
@@ -70,8 +70,21 @@ void isr_general_protection(uint32_t error_code) {
 }
 
 void isr_page_fault(uint32_t error_code) {
-    uint32_t cr2;
-    asm volatile("mov %%cr2, %0" : "=r"(cr2));
-    cprintf("Page fault at %08X, error: %08X\n", cr2, error_code);
+    uint32_t fault_addr;
+    asm volatile("mov %%cr2, %0" : "=r" (fault_addr));
+
+    if (!(error_code & 0x1)) { // Page not present
+        uint32_t* current_pd = get_current_page_directory();
+        int result = assign_page_table(current_pd, (void*)(fault_addr & ~0x3FFFFF), 
+                                      (error_code & 0x4) ? PAGE_USER : 0);
+        if (result == 0) {
+            return; // Successfully assigned a page table, resume execution
+        }
+        cprintf("Page Fault: No free page tables for %08X\n", fault_addr);
+    } else {
+        cprintf("Page Fault: Protection violation at %08X\n", fault_addr);
+    }
+
+    cprintf("Error code: %08X\n", error_code);
     asm volatile("cli; hlt");
-}
+}   
