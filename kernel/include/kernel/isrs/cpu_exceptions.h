@@ -3,6 +3,12 @@
 
 #include <stdint.h>
 
+typedef enum {
+    PAGE_FAULT_NOT_PRESENT = 0, // Page not present
+    PAGE_FAULT_PROTECTION = 1,  // Protection violation
+    PAGE_FAULT_NO_TABLES = -1   // No free page tables available
+} PageFaultStatus;
+
 void isr_divide_error(void);
 void isr_debug(void);
 void isr_nmi(void);

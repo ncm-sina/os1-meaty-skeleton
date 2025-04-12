@@ -18,6 +18,7 @@
 #include <kernel/vga_basic.h>
 #include <kernel/mcpuid.h>
 #include <kernel/paging.h>
+#include <kernel/process.h>
 #include <kernel/fpu.h>
 #include <kernel/idt.h>
 #include <kernel/isrs/all.h>
@@ -34,18 +35,20 @@ static void init_drivers(){
 // Kernel initialization
 static void kernel_init(multiboot_info_t* mbi) {
     _hide_cursor();
+    init_gdt();
     init_paging(mbi);
-
     // Initialize IDT (sets up exceptions and IRQs)
     idt_init();
-    init_drivers();
     enable_fpu();
+    init_drivers();
+    init_processes();
+
+    load_multiboot_mods(mbi);
+
     mouse_drv.init(80,25);
     // mouse_drv.set_speed(20); // Faster movement
     // mouse_drv.set_resolution(1); // 2 counts/mm
     // mouse_drv.set_sample_rate(100); // 100 Hz    
-
-    
 
     clrscr();
 
@@ -55,6 +58,9 @@ static void kernel_init(multiboot_info_t* mbi) {
 // Kernel main function
 void kernel_main(multiboot_info_t* mbi) {
     kernel_init(mbi);
+
+    
+    show_processes(0, 10); // Show first 10 processes
 
     b_test_mouse();
     // b_test_isr_driver();

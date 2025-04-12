@@ -8,6 +8,7 @@
 # Kernel virtual base address
 .set KERNEL_VIRT_BASE, 0xC0000000
 .set KERNEL_PAGE_DIR,  (page_directory - KERNEL_VIRT_BASE)
+.set MAX_PROCESSES, 256
 
 /* Multiboot header for GRUB */
 .section .multiboot
@@ -63,19 +64,6 @@ _start:
     jmp *%eax
 
 higher_half:
-
-    /* Load GDT */
-    lgdt gdt_descriptor
-    ljmp $0x08, $gdt_loaded
-
-gdt_loaded:
-
-    movw $0x10, %ax
-    movw %ax, %ds
-    movw %ax, %es
-    movw %ax, %fs
-    movw %ax, %gs
-    movw %ax, %ss
 
     movl $stack_top, %esp
     pushl multiboot_info
@@ -159,6 +147,8 @@ pagetables_virt_start: .long 0xFFC00000
 pagedir: .skip 4096
 .global pagetable
 pagetable: .skip 4096
+.global pagedirs
+pagedirs: .skip 4096 * MAX_PROCESSES
 .global pagetables_pagetable
 pagetables_pagetable: .skip 4096
 .global tmppage

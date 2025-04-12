@@ -2,18 +2,22 @@
 #include <kernel/mconio.h>
 
 extern uint32_t pagedir[1024];
+extern uint32_t pagedirs[MAX_PROCESSES][1024];
 extern uint32_t pagetable[1024];
 extern uint32_t pagetables_pagetable[1024];
 extern void* _kernel_end_phys;
 
 PagingState paging_state = {
     .pagetable_bitmap = {0},
+    .pagedir_bitmap = {0},
     .total_pages = 0,
     .total_pagetables = 0,
     .used_pagetables = 0,
+    .used_pagedirs = 0,
     .pagetables_phys_start = 0,
     .pagetables_virt_start = PAGETABLES_VIRT_START
 };
+
 
 void init_paging(multiboot_info_t* mbi) {
     // Calculate total pages from Multiboot memory map
@@ -62,7 +66,25 @@ void init_paging(multiboot_info_t* mbi) {
         paging_state.pagetable_bitmap[i / 8] |= (1 << (i % 8));
         paging_state.used_pagetables++;
     }
+
+    // we hold pagedirs of processes inside pagedirs
+    // we make sure they are initilized with 0
+    for(int i=0; i< MAX_PROCESSES; i++){
+        for(int j=0; j< 1024; j++){
+            pagedirs[i][j]=0;
+        }
+    }
 }
+
+static inline uint32_t* get_pagetable_phys_byidx(int pt_idx){
+    return paging_state.pagetables_phys_start + pt_idx * PAGE_SIZE;    
+}
+
+static inline uint32_t* get_pagedir_phys_byidx(int pd_idx){
+    // return pagedirs - KERNEL_VBASE + pd_idx * PAGE_SIZE; // this should do the same   
+    return (&pagedirs[pd_idx][0]) - KERNEL_VBASE;    
+}
+
 
 void switch_page_directory(uint32_t* new_pagedir_phys) {
     asm volatile("mov %0, %%cr3" : : "r" (new_pagedir_phys));
@@ -74,32 +96,36 @@ uint32_t* get_current_page_directory() {
     return (uint32_t*)cr3; // Physical address
 }
 
-static uint32_t* get_virt_pointer(uint32_t phys_addr) {
-    uint32_t* pt = (uint32_t*)0xC0104000; // pagetable's virtual address
-    uint32_t temp_idx = (paging_state.pagetables_virt_start >> 12) & 0x3FF; // PTE for 0xFFC00000
-    pt[temp_idx] = phys_addr | PAGE_PRESENT | PAGE_WRITE;
-    asm volatile("invlpg (%0)" : : "r" (paging_state.pagetables_virt_start) : "memory");
-    return (uint32_t*)paging_state.pagetables_virt_start;
+uint32_t* get_pagedir_virtaddr(uint32_t phys_addr) {
+    if(phys_addr  & 0x3FF) return 0; // not 4k aligned
+    uint32_t min_phys_addr = pagedirs - KERNEL_VBASE;
+    uint32_t max_phys_addr = pagedirs + MAX_PROCESSES - KERNEL_VBASE;
+    if(phys_addr < min_phys_addr || phys_addr>max_phys_addr) return 0;
+
+    return (uint32_t*) phys_addr + KERNEL_VBASE;
 }
 
 uint32_t* create_process_pd() {
-    uint32_t pd_idx = 0;
-    for (int i = 0; i < paging_state.total_pagetables; i++) {
-        if (!(paging_state.pagetable_bitmap[i / 8] & (1 << (i % 8)))) {
-            paging_state.pagetable_bitmap[i / 8] |= (1 << (i % 8));
-            pd_idx = i;
-            paging_state.used_pagetables++;
-            break;
-        }
+    // Check if enough page tables are available (90% cap)
+    if (paging_state.used_pagetables * 10 > paging_state.total_pagetables * 9) {
+        return NULL; // Not enough free page tables for process mappings
     }
-    if (pd_idx == 0) return NULL; // No free page tables (0 is reserved)
 
-    uint32_t* new_pd_phys = (uint32_t*)(paging_state.pagetables_phys_start + pd_idx * PAGE_SIZE);
-    uint32_t* new_pd = get_virt_pointer((uint32_t)new_pd_phys);
+    // Find free page directory index
+    int pd_idx = get_free_pagedir_idx();
+    if (pd_idx < 0) return NULL; // No free page directories
 
+    // Get physical and virtual addresses
+    uint32_t* new_pd_phys = get_pagedir_phys_byidx(pd_idx);
+    uint32_t* new_pd = get_pagedir_virtaddr((uint32_t)new_pd_phys);
+    if (!new_pd) return NULL; // Invalid virtual address mapping
+
+    // Clear page directory
     for (int i = 0; i < 1024; i++) {
         new_pd[i] = 0;
     }
+
+    // Copy kernel mappings (0xC0000000-0xFFFFFFFF)
     for (int i = 768; i < 1024; i++) {
         if (pagedir[i] & PAGE_PRESENT) {
             new_pd[i] = pagedir[i];
@@ -109,7 +135,74 @@ uint32_t* create_process_pd() {
     return new_pd_phys;
 }
 
-static int get_free_pagetable_idx() {
+int assign_page_table(uint32_t* page_dir, void* virt_addr, uint32_t flags) {
+    if ((uint32_t)virt_addr & 0x3FFFFF) return ASSIGN_PAGE_NOT_ALIGNED;
+    uint32_t pd_idx = (uint32_t)virt_addr >> 22;
+    if (pd_idx >= 768 && pd_idx < 1023) return ASSIGN_PAGE_KERNEL_SPACE;
+
+    uint32_t* pd = get_pagedir_virtaddr((uint32_t)page_dir);
+    if (pd[pd_idx] & PAGE_PRESENT) return ASSIGN_PAGE_ALREADY_MAPPED;
+
+    int pt_idx = get_free_pagetable_idx();
+    if (pt_idx < 0) return ASSIGN_PAGE_NO_TABLES;
+
+    uint32_t pt_phys = get_pagetable_phys_byidx(pt_idx);
+    pd[pd_idx] = pt_phys | PAGE_PRESENT | PAGE_WRITE | (flags & PAGE_USER);    
+
+    uint32_t* current_pd = get_current_page_directory();
+    if (page_dir == current_pd) {
+        asm volatile("invlpg (%0)" : : "r" (virt_addr) : "memory");
+    }
+
+    return ASSIGN_PAGE_OK;
+}
+
+int get_free_pagedir_idx(){
+    for (int i = 0; i < MAX_PROCESSES; i++) {
+        if (!(paging_state.pagedir_bitmap[i / 8] & (1 << (i % 8)))) {
+            paging_state.pagedir_bitmap[i / 8] |= (1 << (i % 8));
+            paging_state.used_pagedirs++;
+            return i;
+        }
+    }
+    return -1;
+}
+
+void free_pagedir_idx(int idx) {
+    if (idx < 0 || idx >= MAX_PROCESSES) {
+        cprintf("Invalid pagedir index: %d\n", idx);
+        return;
+    }
+    if (!(paging_state.pagedir_bitmap[idx / 8] & (1 << (idx % 8)))) {
+        cprintf("pagedir %d already free\n", idx);
+        return;
+    }
+
+    paging_state.pagedir_bitmap[idx / 8] &= ~(1 << (idx % 8));
+    paging_state.used_pagedirs--;
+}
+
+FreePageStatus free_pagedir_by_vaddr(void* vaddr) {
+    uint32_t addr = (uint32_t)vaddr;
+    uint32_t pagedirs_addr = (uint32_t)pagedirs;
+    
+    if (addr < pagedirs_addr || addr >= pagedirs_addr + MAX_PROCESSES) {
+        return FREE_PAGE_OUT_OF_RANGE;
+    }
+    if (addr & (PAGE_SIZE - 1)) {
+        return FREE_PAGE_NOT_ALIGNED;
+    }
+
+    int idx = (addr - pagedirs_addr) / PAGE_SIZE;
+    if (idx >= MAX_PROCESSES) {
+        return FREE_PAGE_EXCEEDS_POOL;
+    }
+
+    free_pagedir_idx(idx);
+    return FREE_PAGE_OK;
+}
+
+int get_free_pagetable_idx() {
     for (int i = 0; i < paging_state.total_pagetables; i++) {
         if (!(paging_state.pagetable_bitmap[i / 8] & (1 << (i % 8)))) {
             paging_state.pagetable_bitmap[i / 8] |= (1 << (i % 8));
@@ -118,28 +211,6 @@ static int get_free_pagetable_idx() {
         }
     }
     return -1;
-}
-
-int assign_page_table(uint32_t* page_dir, void* virt_addr, uint32_t flags) {
-    if ((uint32_t)virt_addr & 0x3FFFFF) return -3; // Must be 4MB-aligned
-    uint32_t pd_idx = (uint32_t)virt_addr >> 22;
-    if (pd_idx >= 768 && pd_idx < 1023) return -4; // Kernel space
-
-    uint32_t* pd = 0;//get_virt_pointer((uint32_t)page_dir);
-    if (pd[pd_idx] & PAGE_PRESENT) return -2; // Already mapped
-
-    int pt_idx = get_free_pagetable_idx();
-    if (pt_idx < 0) return -1; // No free page tables
-
-    uint32_t pt_phys = paging_state.pagetables_phys_start + pt_idx * PAGE_SIZE;
-    pd[pd_idx] = pt_phys | PAGE_PRESENT | PAGE_WRITE | (flags & PAGE_USER);
-
-    uint32_t* current_pd = get_current_page_directory();
-    if (page_dir == current_pd) {
-        asm volatile("invlpg (%0)" : : "r" (virt_addr) : "memory");
-    }
-
-    return 0;
 }
 
 void free_pagetable_idx(int idx) {
@@ -156,20 +227,20 @@ void free_pagetable_idx(int idx) {
     paging_state.used_pagetables--;
 }
 
-int free_pagetable_by_vaddr(void* vaddr) {
+FreePageStatus free_pagetable_by_vaddr(void* vaddr) {
     uint32_t addr = (uint32_t)vaddr;
     if (addr < paging_state.pagetables_virt_start || addr >= 0xFFFFFFFF) {
-        return -1; // Out of pool range
+        return FREE_PAGE_OUT_OF_RANGE;
     }
     if (addr & (PAGE_SIZE - 1)) {
-        return -2; // Not aligned
+        return FREE_PAGE_NOT_ALIGNED;
     }
 
     int idx = (addr - paging_state.pagetables_virt_start) / PAGE_SIZE;
     if (idx >= paging_state.total_pagetables) {
-        return -3; // Beyond allocated tables
+        return FREE_PAGE_EXCEEDS_POOL;
     }
 
     free_pagetable_idx(idx);
-    return 0;
+    return FREE_PAGE_OK;
 }
