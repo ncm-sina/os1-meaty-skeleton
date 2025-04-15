@@ -1,0 +1,8 @@
+#ifndef KERNEL_CONFIG_H
+#define KERNEL_CONFIG_H
+
+#define KERNEL_LOG_LEVEL 1
+#define KERNEL_VGA_ENABLED 1
+#define KERNEL_SERIAL_ENABLED 1
+
+#endif

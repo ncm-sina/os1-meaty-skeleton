@@ -1,7 +1,7 @@
 #ifndef _KERNEL_PAGING_H
 #define _KERNEL_PAGING_H
 
-#include <kernel/multiboot.h>
+#include <multiboot.h>
 #include <stdint.h>
 
 #define PAGE_SIZE 4096
