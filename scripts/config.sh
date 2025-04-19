@@ -1,5 +1,6 @@
 SYSTEM_HEADER_PROJECTS="../src/libc ../src/kernel"
-PROJECTS="../src/lib/libc ../src/kernel ../src/user"
+PROJECTS="../src/libc ../src/kernel"
+# PROJECTS="../src/libc ../src/kernel ../src/user"
 
 export MAKE=${MAKE:-make}
 export HOST=${HOST:-$(./default-host.sh)}
@@ -19,8 +20,9 @@ export CFLAGS='-O2 -g '
 export CPPFLAGS=''
 
 # Configure the cross-compiler to use the desired system root.
-# export SYSROOT="$(pwd)/sysroot"
-export SYSROOT="../sysroot"
+# export SYSROOT="$(pwd)/../sysroot"
+export SYSROOT="../../sysroot"
+echo $SYSROOT
 export CC="$CC --sysroot=$SYSROOT"
 
 # Work around that the -elf gcc targets doesn't have a system include directory
