@@ -1,4 +1,4 @@
-#include <kernel/gdt.h>
+#include <kernel/arch/i386/gdt.h>
 
 // Static GDT array and pointer
 static GdtEntry gdt[GDT_ENTRIES];

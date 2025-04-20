@@ -1,5 +1,6 @@
 #include <kernel/process.h>
-#include <kernel/paging.h>
+#include <kernel/arch/i386/paging.h>
+#include <stdio.h>
 
 extern uint32_t pagedir[1024];
 
@@ -24,7 +25,7 @@ static const char* process_state_to_string(ProcessStateEnum state) {
 void show_processes(int start, int count) {
     // Validate inputs
     if (start < 0 || start >= MAX_PROCESSES || count <= 0) {
-        cprintf("Invalid parameters: start=%d, count=%d\n", start, count);
+        printf("Invalid parameters: start=%d, count=%d\n", start, count);
         return;
     }
 
@@ -34,8 +35,8 @@ void show_processes(int start, int count) {
     }
 
     // Print header
-    cprintf("\n PID\t PageDir \tStatus\n");
-    cprintf("----\t ------- \t--------\n");
+    printf("\n PID\t PageDir \tStatus\n");
+    printf("----\t ------- \t--------\n");
 
     // Print process info
     int printedProcesses=0;
@@ -43,7 +44,7 @@ void show_processes(int start, int count) {
         Process* proc = &process_state.process_table[i];
         if(!proc || proc->pid == 0) continue;
         printedProcesses++;
-        cprintf("%3d\t %08X\t %s\n",
+        printf("%3d\t %08X\t %s\n",
             proc->pid,
             proc->page_dir ? (uint32_t)proc->page_dir : 0,
             process_state_to_string(proc->state));
@@ -147,7 +148,7 @@ void load_multiboot_mod(multiboot_module_t* mod) {
     };
     uint32_t pid = create_process(&bin);
     if (pid) {
-        cprintf("Process %d created for module\n", pid);
+        printf("Process %d created for module\n", pid);
     }
 }
 

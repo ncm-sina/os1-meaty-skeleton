@@ -1,7 +1,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <kernel/isrs/timer.h>
+#include <kernel/arch/i386/isrs/timer.h>
 #include <kernel/process.h>
 
 volatile int isr_timer_tick_flag = 0;

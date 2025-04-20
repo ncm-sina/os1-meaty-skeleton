@@ -1,9 +1,9 @@
 #include <kernel/drivers/mouse.h>
-#include <kernel/isrs/mouse.h>
+#include <kernel/arch/i386/isrs/mouse.h>
 #include <kernel/mport.h>
-#include <kernel/mconio.h>
 #include <kernel/drivers/cursor.h> // For cursor updates
 
+#include <stdio.h>
 
 static struct mouse_data_t _mouse_data = {
     .buffer = {0},
@@ -22,14 +22,14 @@ static struct mouse_data_t _mouse_data = {
 static int mouse_wait_read(void) {
     int32_t timeout = MOUSE_TIMEOUT;
     while (!(inb(0x64) & 0x01) && timeout--) asm("nop");
-    if (timeout == 0) { cprintf("Mouse wait_read timeout\n"); return 0; }
+    if (timeout == 0) { printf("Mouse wait_read timeout\n"); return 0; }
     return 1;
 }
 
 static int mouse_wait_write(void) {
     int32_t timeout = MOUSE_TIMEOUT;
     while ((inb(0x64) & 0x02) && timeout--) asm("nop");
-    if (timeout == 0) { cprintf("Mouse wait_write timeout\n"); return 0; }
+    if (timeout == 0) { printf("Mouse wait_write timeout\n"); return 0; }
     return 1;
 }
 

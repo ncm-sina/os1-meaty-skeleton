@@ -1,8 +1,10 @@
-#include <kernel/idt.h>
+#include <kernel/arch/i386/idt.h>
 #include <kernel/mport.h>
-#include <kernel/isrs/all.h>
+#include <kernel/arch/i386/isrs/all.h>
 #include <kernel/drivers/all.h>
-#include <kernel/mconio.h>
+#include <kernel/arch/i386/syscall.h>
+
+#include <stdio.h>
 
 #define IDT_ENTRIES 256
 
@@ -15,8 +17,8 @@ struct idt_descriptor idt_desc = {
 extern void idt_load(uint32_t idt_desc_addr);
 extern void isr_default(void);
 extern void isr0(void), isr1(void), isr2(void), isr3(void), isr4(void), isr5(void),
-         isr6(void), isr7(void), isr8(void), isr10(void), isr11(void), isr12(void),
-         isr13(void), isr14(void), isr32(void), isr33(void), isr44(void); // Added isr44
+            isr6(void), isr7(void), isr8(void), isr10(void), isr11(void), isr12(void),
+            isr13(void), isr14(void), isr32(void), isr33(void), isr44(void), isr128(void); // Added isr44
 
 void *isr_stubs[IDT_ENTRIES];
 
@@ -46,20 +48,20 @@ void isr_handler(uint32_t vector, uint32_t error_code) {
             case 12: isr_stack_segment_fault(error_code); break;
             case 13: isr_general_protection(error_code); break;
             case 14: isr_page_fault(error_code); break;
-            default: cprintf("Unhandled exception: %d\n", vector); break;
+            default: printf("Unhandled exception: %d\n", vector); break;
         }
     } else if (vector >= 32 && vector <= 47) {
         switch (vector) {
             case 32: isr_timer(); break;    // IRQ0: Timer
             case 33: isr_keyboard(); break; // IRQ1: Keyboard
             case 44: isr_mouse(); break;    // IRQ12: Mouse
-            default: cprintf("Unhandled IRQ: %d\n", vector); break;
+            default: printf("Unhandled IRQ: %d\n", vector); break;
         }
         if (vector >= 40)
             outb(0xA0, 0x20); // EOI to slave PIC
         outb(0x20, 0x20);     // EOI to master PIC
     } else {
-        cprintf("Unknown vector: %d\n", vector);
+        printf("Unknown vector: %d\n", vector);
     }
 }
 
@@ -90,10 +92,15 @@ void idt_init(void) {
     isr_stubs[33] = isr33; // Keyboard ISR
     isr_stubs[44] = isr44; // Mouse ISR
 
+    isr_stubs[128] = isr128;
+
     for (int i = 0; i < IDT_ENTRIES; i++) {
         if (!isr_stubs[i]) isr_stubs[i] = isr_default;
         idt_set_gate(i, (uint32_t)isr_stubs[i], 0x08, 0x8E);
     }
+
+    idt_set_gate(128, (unsigned)syscall_handler, 0x08, 0x8E | 0x60); // DPL=3 for user access
+
     pic_remap();
     idt_load((uint32_t)&idt_desc);
     asm volatile("sti"); // Enable interrupts

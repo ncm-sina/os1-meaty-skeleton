@@ -1,4 +1,5 @@
-#include <cpu.h>
+#include <kernel/arch/i386/cpu.h>
+#include <io.h>
 
 // Global CPU features
 static struct cpu_features cpu_features = {0};
@@ -37,7 +38,7 @@ static void cpu_detect_features(void) {
     cpu_features.pae = (edx >> 6) & 1;
 }
 
-static inline fpu_init(){
+static inline void fpu_init(){
     // Initialize FPU
     asm volatile(
         "fninit\n"           // Reset FPU
@@ -82,36 +83,6 @@ void cpu_enable_interrupts(void) {
 
 void cpu_disable_interrupts(void) {
     asm volatile("cli");
-}
-
-uint8_t inb(uint16_t port) {
-    uint8_t value;
-    asm volatile("inb %1, %0" : "=a"(value) : "Nd"(port));
-    return value;
-}
-
-void outb(uint16_t port, uint8_t value) {
-    asm volatile("outb %0, %1" : : "a"(value), "Nd"(port));
-}
-
-uint16_t inw(uint16_t port) {
-    uint16_t value;
-    asm volatile("inw %1, %0" : "=a"(value) : "Nd"(port));
-    return value;
-}
-
-void outw(uint16_t port, uint16_t value) {
-    asm volatile("outw %0, %1" : : "a"(value), "Nd"(port));
-}
-
-uint32_t inl(uint16_t port) {
-    uint32_t value;
-    asm volatile("inl %1, %0" : "=a"(value) : "Nd"(port));
-    return value;
-}
-
-void outl(uint16_t port, uint32_t value) {
-    asm volatile("outl %0, %1" : : "a"(value), "Nd"(port));
 }
 
 uint64_t read_tsc(void) {

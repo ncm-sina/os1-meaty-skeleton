@@ -1,5 +1,5 @@
 #include <kernel/drivers/timer.h>
-#include <kernel/isrs/timer.h>
+#include <kernel/arch/i386/isrs/timer.h>
 #include <kernel/mport.h>
 
 static uint32_t ticks = 0;

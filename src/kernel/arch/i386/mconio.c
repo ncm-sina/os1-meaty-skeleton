@@ -1,5 +1,5 @@
 #include <kernel/mconio.h>
-#include <kernel/vga_basic.h>
+#include <kernel/drivers/vga.h>
 #include <stdarg.h>
 
 // Shared buffer for printf and cprintf
@@ -243,7 +243,7 @@ void sprintf(char *output, const char *fstring, ...) {
 
 // Clear the screen
 void clrscr(void) {
-    _vgab_clear_screen();
+    vga_clear();
 }
 
 // Print a formatted string with ANSI color support
@@ -253,7 +253,7 @@ void cprintf(const char *fstring, ...) {
     format_string(buffer, fstring, args);
     va_end(args);
 
-    unsigned char current_color = _vgab_get_textcolor();
+    unsigned char current_color = vga_get_textcolor();
     size_t i = 0;
 
     while (buffer[i] != '\0') {
@@ -283,14 +283,14 @@ void cprintf(const char *fstring, ...) {
                     else if (num >= 90 && num <= 97) fg = num - 90 + 8;
                     else if (num >= 40 && num <= 47) bg = num - 40;
                     else if (num >= 100 && num <= 107) bg = num - 100 + 8;
-                    _vgab_set_textcolor(fg, bg);
+                    vga_set_textcolor(fg, bg);
                     i++;
                     continue;
                 }
             }
             i++;
         }
-        _vgab_put_char(buffer[i]);
+        vga_put_char(buffer[i]);
         i++;
     }
 }
@@ -302,41 +302,41 @@ void printf(const char *fstring, ...) {
     format_string(buffer, fstring, args);
     va_end(args);
 
-    _vgab_write_string(buffer);
+    vga_write_string(buffer);
 }
 
 // Print a single character
 void putchar(char c) {
-    _vgab_put_char(c);
+    vga_put_char(c);
 }
 
 // Set and get text color
 void set_textcolor(uint8_t fg, uint8_t bg) {
-    _vgab_set_textcolor(fg, bg);
+    vga_set_textcolor(fg, bg);
 }
 
 uint8_t get_textcolor(void) {
-    return _vgab_get_textcolor();
+    return vga_get_textcolor();
 }
 
 void set_text_fg_color(uint8_t fg) {
-    uint8_t bg = (_vgab_get_textcolor() >> 4) & 0x0F;
-    _vgab_set_textcolor(fg, bg);
+    uint8_t bg = (vga_get_textcolor() >> 4) & 0x0F;
+    vga_set_textcolor(fg, bg);
 }
 
 uint8_t get_text_fg_color(void) {
-    return _vgab_get_textcolor() & 0x0F;
+    return vga_get_textcolor() & 0x0F;
 }
 
 void set_text_bg_color(uint8_t bg) {
-    uint8_t fg = _vgab_get_textcolor() & 0x0F;
-    _vgab_set_textcolor(fg, bg);
+    uint8_t fg = vga_get_textcolor() & 0x0F;
+    vga_set_textcolor(fg, bg);
 }
 
 uint8_t get_text_bg_color(void) {
-    return (_vgab_get_textcolor() >> 4) & 0x0F;
+    return (vga_get_textcolor() >> 4) & 0x0F;
 }
 
 void gotoxy(uint8_t x, uint8_t y) {
-    _vgab_set_cursor(x, y);
+    vga_gotoxy(x, y);
 }

@@ -1,9 +1,9 @@
 #ifndef DRIVERS_ALL_H
 #define DRIVERS_ALL_H
 
-#include <kernel/drivers/keyboard.h>
-#include <kernel/drivers/timer.h>
-#include <kernel/drivers/mouse.h>
-#include <kernel/drivers/cursor.h>
+#include "keyboard.h"
+#include "timer.h"
+#include "mouse.h"
+#include "cursor.h"
 
 #endif

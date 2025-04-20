@@ -1,4 +1,4 @@
-#include <kernel/isrs/keyboard.h>
+#include <kernel/arch/i386/isrs/keyboard.h>
 #include <kernel/mport.h>
 
 // Global variables accessible to other files via header

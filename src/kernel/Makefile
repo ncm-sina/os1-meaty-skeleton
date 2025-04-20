@@ -31,7 +31,20 @@ LIBS:=$(LIBS) $(KERNEL_ARCH_LIBS)
 
 KERNEL_OBJS=\
 $(KERNEL_ARCH_OBJS) \
-kernel/kernel.o \
+drivers/timer.o \
+drivers/keyboard.o \
+drivers/mouse.o \
+drivers/cursor.o \
+drivers/vga.o \
+fs/vfs.o \
+fs/syscalls.o \
+mm/vmm.o \
+mm/syscalls.o \
+process/syscalls.o \
+misc/syscalls.o \
+basic_tests.o \
+syscall.o \
+main.o \
 
 OBJS=\
 $(ARCHDIR)/crti.o \
@@ -56,12 +69,12 @@ all: myos.kernel
 
 myos.kernel: $(OBJS) $(ARCHDIR)/linker.ld
 	@printf "$(CC) -T $(ARCHDIR)/linker.ld -o $@ $(CFLAGS)\n $(foreach obj,$(LINK_LIST),$(obj) \ \n) --verbose\n" 
-	@$(CC) -T $(ARCHDIR)/linker.ld -o $@ $(CFLAGS) $(LINK_LIST)
+	$(CC) -T $(ARCHDIR)/linker.ld -o $@ $(CFLAGS) $(LINK_LIST)
 	#grub-file --is-x86-multiboot myos.kernel
 
 
 $(ARCHDIR)/crtbegin.o $(ARCHDIR)/crtend.o:
-	OBJ="../../../../../../i686-elf-tools-windows/lib/gcc/i686-elf/7.1.0/$(@F)" && cp "$$OBJ" $@
+	OBJ="../../../../../../../i686-elf-tools-windows/lib/gcc/i686-elf/7.1.0/$(@F)" && cp "$$OBJ" $@
 	
 .c.o:
 	$(CC) -MD -c $< -o $@ -std=gnu11 $(CFLAGS) $(CPPFLAGS)
@@ -77,6 +90,7 @@ clean:
 install: install-headers install-kernel
 
 install-headers:
+	echo "-=-=-=-=-= $(LINK_LIST)"
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
 	cp -R --preserve=timestamps include/. $(DESTDIR)$(INCLUDEDIR)/.
 

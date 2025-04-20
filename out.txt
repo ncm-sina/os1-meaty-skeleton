@@ -1,0 +1,247 @@
+os1-meaty-skeleton
+├── config
+│   ├── grub
+│   │   ├── grub.cfg
+│   ├── init.conf
+│   ├── kernel_config.h
+│   ├── shell.rc
+├── draw_folder_structure.sh
+├── out.txt
+├── scripts
+│   ├── build.sh
+│   ├── clean.sh
+│   ├── config.sh
+│   ├── default-host.sh
+│   ├── headers.sh
+│   ├── iso-docker.sh
+│   ├── iso.sh
+│   ├── qemu.sh
+│   ├── target-triplet-to-arch.sh
+├── src
+│   ├── kernel
+│   │   ├── Makefile
+│   │   ├── arch
+│   │   │   ├── i386
+│   │   │   │   ├── a20.c
+│   │   │   │   ├── boot.S
+│   │   │   │   ├── cpu
+│   │   │   │   │   ├── cpu.c
+│   │   │   │   │   ├── fpu.c
+│   │   │   │   │   ├── mcpuid.c
+│   │   │   │   │   ├── mport.c
+│   │   │   │   ├── crti.S
+│   │   │   │   ├── crtn.S
+│   │   │   │   ├── enable_a20_32.S
+│   │   │   │   ├── gdt.c
+│   │   │   │   ├── interrupts
+│   │   │   │   │   ├── idt.c
+│   │   │   │   │   ├── idt_asm.S
+│   │   │   │   │   ├── isrs
+│   │   │   │   │   │   ├── cpu_exceptions.c
+│   │   │   │   │   │   ├── fpu.d
+│   │   │   │   │   │   ├── fpu.o
+│   │   │   │   │   │   ├── keyboard.c
+│   │   │   │   │   │   ├── mouse.c
+│   │   │   │   │   │   ├── timer.c
+│   │   │   │   ├── linker.ld
+│   │   │   │   ├── make.config
+│   │   │   │   ├── mconio.c
+│   │   │   │   ├── paging.c
+│   │   │   │   ├── process.c
+│   │   │   │   ├── process_asm.S
+│   │   │   │   ├── tty.c
+│   │   │   │   ├── vga.c
+│   │   │   │   ├── vga.c
+│   │   ├── basic_tests.c
+│   │   ├── drivers
+│   │   │   ├── cursor.c
+│   │   │   ├── keyboard.c
+│   │   │   ├── mouse.c
+│   │   │   ├── timer.c
+│   │   ├── fs
+│   │   │   ├── fs.c
+│   │   ├── include
+│   │   │   ├── kernel
+│   │   │   │   ├── arch
+│   │   │   │   │   ├── i386
+│   │   │   │   │   │   ├── a20.h
+│   │   │   │   │   │   ├── cpu.h
+│   │   │   │   │   │   ├── gdt.h
+│   │   │   │   │   │   ├── idt.h
+│   │   │   │   │   │   ├── isrs
+│   │   │   │   │   │   │   ├── all.h
+│   │   │   │   │   │   │   ├── cpu_exceptions.h
+│   │   │   │   │   │   │   ├── keyboard.h
+│   │   │   │   │   │   │   ├── mouse.h
+│   │   │   │   │   │   │   ├── timer.h
+│   │   │   │   │   │   ├── mcpuid.h
+│   │   │   │   │   │   ├── paging.h
+│   │   │   │   │   │   ├── pic.h
+│   │   │   │   ├── basic_tests.h
+│   │   │   │   ├── drivers
+│   │   │   │   │   ├── all.h
+│   │   │   │   │   ├── cursor.h
+│   │   │   │   │   ├── keyboard.h
+│   │   │   │   │   ├── mouse.h
+│   │   │   │   │   ├── timer.h
+│   │   │   │   ├── fpu.h
+│   │   │   │   ├── fs
+│   │   │   │   │   ├── vfs.h
+│   │   │   │   ├── kernel-base.h
+│   │   │   │   ├── mconio.h
+│   │   │   │   ├── mm
+│   │   │   │   │   ├── kmalloc.h
+│   │   │   │   ├── mport.h
+│   │   │   │   ├── multiboot.h
+│   │   │   │   ├── process.h
+│   │   │   │   ├── sched
+│   │   │   │   │   ├── scheduler.h
+│   │   │   │   ├── tty.h
+│   │   │   │   ├── utils
+│   │   │   │   │   ├── klog.h
+│   │   │   │   │   ├── kmem.h
+│   │   │   │   │   ├── kpanic.h
+│   │   │   │   ├── vga.h
+│   │   │   ├── syscall.h
+│   │   ├── main.c
+│   │   ├── mm
+│   │   │   ├── mm.c
+│   │   ├── sched
+│   │   ├── syscall.c
+│   │   ├── utils
+│   │   │   ├── klog.c
+│   │   │   ├── kmem.c
+│   │   │   ├── kpanic.c
+│   ├── lib
+│   │   ├── libc
+│   │   │   ├── Makefile
+│   │   │   ├── arch
+│   │   │   │   ├── i386
+│   │   │   │   │   ├── bits
+│   │   │   │   │   │   ├── syscall.h
+│   │   │   │   │   ├── make.config
+│   │   │   │   │   ├── syscall_arch.h
+│   │   │   ├── include
+│   │   │   │   ├── ctype.h
+│   │   │   │   ├── errno.h
+│   │   │   │   ├── fcntl.h
+│   │   │   │   ├── signal.h
+│   │   │   │   ├── stdio.h
+│   │   │   │   ├── stdlib.h
+│   │   │   │   ├── string.h
+│   │   │   │   ├── sys
+│   │   │   │   │   ├── cdefs.h
+│   │   │   │   │   ├── stat.h
+│   │   │   │   ├── time.h
+│   │   │   │   ├── unistd.h
+│   │   │   ├── src
+│   │   │   │   ├── stdio
+│   │   │   │   │   ├── fclose.c
+│   │   │   │   │   ├── fgets.c
+│   │   │   │   │   ├── fopen.c
+│   │   │   │   │   ├── fprintf.c
+│   │   │   │   │   ├── fputs.c
+│   │   │   │   │   ├── fscanf.c
+│   │   │   │   │   ├── getc.c
+│   │   │   │   │   ├── printf.c
+│   │   │   │   │   ├── printf.libk.d
+│   │   │   │   │   ├── printf.libk.o
+│   │   │   │   │   ├── putc.c
+│   │   │   │   │   ├── putchar.S
+│   │   │   │   │   ├── putchar.c
+│   │   │   │   │   ├── putchar.libk.d
+│   │   │   │   │   ├── putchar.libk.o
+│   │   │   │   │   ├── puts.c
+│   │   │   │   │   ├── scanf.c
+│   │   │   │   │   ├── sprintf.c
+│   │   │   │   ├── stdlib
+│   │   │   │   │   ├── abort.c
+│   │   │   │   ├── string
+│   │   │   │   │   ├── memcmp.c
+│   │   │   │   │   ├── memcpy.c
+│   │   │   │   │   ├── memmove.c
+│   │   │   │   │   ├── memset.c
+│   │   │   │   │   ├── strlen.c
+│   │   │   │   ├── syscall
+│   │   │   │   │   ├── syscall.h
+│   │   │   │   │   ├── syscall_dispatch.c
+│   │   │   │   │   ├── syscall_wrapper.c
+│   ├── user
+│   │   ├── Makefile
+│   │   ├── arch
+│   │   │   ├── i386
+│   │   │   │   ├── make.config
+│   │   ├── sbin
+│   │   │   ├── Makefile
+│   │   │   ├── init.c
+│   │   ├── shell
+│   │   │   ├── Makefile
+│   │   │   ├── shell.c
+│   │   ├── utils
+│   │   │   ├── Makefile
+│   │   │   ├── cat.c
+│   │   │   ├── cp.c
+│   │   │   ├── echo.c
+│   │   │   ├── head.c
+│   │   │   ├── ls.c
+│   │   │   ├── mv.c
+│   │   │   ├── rm.c
+│   │   │   ├── tail.c
+│   │   │   ├── vi.c
+├── sysroot
+│   ├── usr
+│   │   ├── include
+│   │   │   ├── ctype.h
+│   │   │   ├── errno.h
+│   │   │   ├── fcntl.h
+│   │   │   ├── kernel
+│   │   │   │   ├── arch
+│   │   │   │   │   ├── i386
+│   │   │   │   │   │   ├── a20.h
+│   │   │   │   │   │   ├── cpu.h
+│   │   │   │   │   │   ├── gdt.h
+│   │   │   │   │   │   ├── idt.h
+│   │   │   │   │   │   ├── isrs
+│   │   │   │   │   │   │   ├── all.h
+│   │   │   │   │   │   │   ├── cpu_exceptions.h
+│   │   │   │   │   │   │   ├── keyboard.h
+│   │   │   │   │   │   │   ├── mouse.h
+│   │   │   │   │   │   │   ├── timer.h
+│   │   │   │   │   │   ├── mcpuid.h
+│   │   │   │   │   │   ├── paging.h
+│   │   │   │   │   │   ├── pic.h
+│   │   │   │   ├── basic_tests.h
+│   │   │   │   ├── drivers
+│   │   │   │   │   ├── all.h
+│   │   │   │   │   ├── cursor.h
+│   │   │   │   │   ├── keyboard.h
+│   │   │   │   │   ├── mouse.h
+│   │   │   │   │   ├── timer.h
+│   │   │   │   ├── fpu.h
+│   │   │   │   ├── fs
+│   │   │   │   │   ├── vfs.h
+│   │   │   │   ├── kernel-base.h
+│   │   │   │   ├── mconio.h
+│   │   │   │   ├── mm
+│   │   │   │   │   ├── kmalloc.h
+│   │   │   │   ├── mport.h
+│   │   │   │   ├── multiboot.h
+│   │   │   │   ├── process.h
+│   │   │   │   ├── sched
+│   │   │   │   │   ├── scheduler.h
+│   │   │   │   ├── tty.h
+│   │   │   │   ├── utils
+│   │   │   │   │   ├── klog.h
+│   │   │   │   │   ├── kmem.h
+│   │   │   │   │   ├── kpanic.h
+│   │   │   │   ├── vga.h
+│   │   │   ├── signal.h
+│   │   │   ├── stdio.h
+│   │   │   ├── stdlib.h
+│   │   │   ├── string.h
+│   │   │   ├── sys
+│   │   │   │   ├── cdefs.h
+│   │   │   │   ├── stat.h
+│   │   │   ├── syscall.h
+│   │   │   ├── time.h
+│   │   │   ├── unistd.h

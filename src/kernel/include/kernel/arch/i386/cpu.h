@@ -1,7 +1,11 @@
 #ifndef CPU_H
 #define CPU_H
 
-#include <types.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+// #include <sys/types.h>
 
 // CPU feature flags
 struct cpu_features {
@@ -25,12 +29,6 @@ void cpu_enable_interrupts(void);
 void cpu_disable_interrupts(void);
 
 // I/O port access
-uint8_t inb(uint16_t port);
-void outb(uint16_t port, uint8_t value);
-uint16_t inw(uint16_t port);
-void outw(uint16_t port, uint16_t value);
-uint32_t inl(uint16_t port);
-void outl(uint16_t port, uint32_t value);
 
 // Read timestamp counter
 uint64_t read_tsc(void);

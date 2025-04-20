@@ -1,4 +1,4 @@
-#include <kernel/isrs/mouse.h>
+#include <kernel/arch/i386/isrs/mouse.h>
 #include <kernel/mport.h>
 
 static void (*mouse_handler)(uint8_t data) = NULL;

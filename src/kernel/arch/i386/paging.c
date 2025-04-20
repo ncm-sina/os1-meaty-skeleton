@@ -1,5 +1,5 @@
-#include <kernel/paging.h>
-#include <kernel/mconio.h>
+#include <kernel/arch/i386/paging.h>
+#include <stdio.h>
 
 extern uint32_t pagedir[1024];
 extern uint32_t pagedirs[MAX_PROCESSES][1024];
@@ -170,11 +170,11 @@ int get_free_pagedir_idx(){
 
 void free_pagedir_idx(int idx) {
     if (idx < 0 || idx >= MAX_PROCESSES) {
-        cprintf("Invalid pagedir index: %d\n", idx);
+        printf("Invalid pagedir index: %d\n", idx);
         return;
     }
     if (!(paging_state.pagedir_bitmap[idx / 8] & (1 << (idx % 8)))) {
-        cprintf("pagedir %d already free\n", idx);
+        printf("pagedir %d already free\n", idx);
         return;
     }
 
@@ -215,11 +215,11 @@ int get_free_pagetable_idx() {
 
 void free_pagetable_idx(int idx) {
     if (idx < 0 || idx >= paging_state.total_pagetables) {
-        cprintf("Invalid pagetable index: %d\n", idx);
+        printf("Invalid pagetable index: %d\n", idx);
         return;
     }
     if (!(paging_state.pagetable_bitmap[idx / 8] & (1 << (idx % 8)))) {
-        cprintf("Pagetable %d already free\n", idx);
+        printf("Pagetable %d already free\n", idx);
         return;
     }
 

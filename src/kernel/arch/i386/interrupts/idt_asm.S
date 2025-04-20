@@ -84,4 +84,7 @@ ISR_STUB 44, 0  # IRQ12: PS/2 Mouse
 ISR_STUB 45, 0  # IRQ13: FPU / Coprocessor
 ISR_STUB 46, 0  # IRQ14: Primary IDE
 ISR_STUB 47, 0  # IRQ15: Secondary IDE
+
+ISR_STUB 128, 0  # IRQ15: Secondary IDE
+
 # Extend as needed

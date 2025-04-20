@@ -1,5 +1,5 @@
 #include <kernel/drivers/keyboard.h>
-#include <kernel/isrs/keyboard.h>
+#include <kernel/arch/i386/isrs/keyboard.h>
 
 #define KEYBOARD_BUFFER_SIZE 64 // Size of the circular buffer for key events
 

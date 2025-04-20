@@ -1,5 +1,5 @@
 #include <cpuid.h>
-#include "kernel/mcpuid.h"
+#include <kernel/arch/i386/mcpuid.h>
 
 // Vendor strings from CPUs.
 #define CPUID_VENDOR_AMD           "AuthenticAMD"

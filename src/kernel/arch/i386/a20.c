@@ -1,5 +1,5 @@
-#include <a20.h>
-#include <libk/io.h>
+#include <kernel/arch/i386/a20.h>
+#include <io.h>
 
 // Keyboard controller ports
 #define KBD_STATUS_PORT 0x64

@@ -1,7 +1,7 @@
 #ifndef _KERNEL_MCPUID_H
 #define _KERNEL_MCPUID_H
 
-#include <kernel/paging.h>
+#include <kernel\multiboot.h>
 
 void b_test_mouse(void);
 void b_test_floating_point(void);
