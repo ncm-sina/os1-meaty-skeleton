@@ -14,7 +14,7 @@ mkdir -p ../isodir/boot/grub
 # EOF
 
 cp ../sysroot/. ../isodir/. -fr
-cp ../config/grub/* ../isodir/boot/grub/* -fr
+cp ../config/grub/grub.cfg ../isodir/boot/grub/grub.cfg -fr
 
 echo "copy isodir to docker iso maker shared volume"
 [ -d ../docker/shared/isodir ] && rm ../../docker/shared/isodir -r

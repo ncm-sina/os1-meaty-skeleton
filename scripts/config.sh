@@ -1,5 +1,5 @@
 SYSTEM_HEADER_PROJECTS="../src/libc ../src/kernel"
-PROJECTS="../src/libc ../src/kernel"
+PROJECTS="../src/libc ../src/kernel ../src/modules/"
 # PROJECTS="../src/libc ../src/kernel ../src/user"
 
 export MAKE=${MAKE:-make}
