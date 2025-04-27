@@ -17,8 +17,8 @@ cp ../sysroot/. ../isodir/. -fr
 cp ../config/grub/grub.cfg ../isodir/boot/grub/grub.cfg -fr
 
 echo "copy isodir to docker iso maker shared volume"
-[ -d ../docker/shared/isodir ] && rm ../../docker/shared/isodir -r
-[ -f ../docker/shared/os0.iso ] && rm ../../docker/shared/os0.iso -r
+[ -d ../../docker/shared/isodir ] && rm ../../docker/shared/isodir -r
+[ -f ../../docker/shared/os0.iso ] && rm ../../docker/shared/os0.iso -r
 cp ../isodir ../../docker/shared/ -fr
 
 /bin/sh ../../docker/docker-make-iso.sh
