@@ -80,7 +80,7 @@ void isr_page_fault(uint32_t error_code) {
         if (result == 0) {
             return; // Successfully assigned a page table, resume execution
         }
-        printf("Page Fault: No free page tables for %08X\n", fault_addr);
+        printf("Page Fault: No free page tables for %08X err: %d \n", fault_addr, result);
     } else {
         printf("Page Fault: Protection violation at %08X\n", fault_addr);
     }

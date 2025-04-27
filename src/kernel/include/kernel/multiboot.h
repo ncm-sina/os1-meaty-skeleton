@@ -43,7 +43,7 @@ typedef struct {
     uint32_t width;
     uint32_t height;
     uint32_t depth;
-} multiboot_header_t;
+} __attribute__((packed)) multiboot_header_t;
 
 // Memory map entry
 typedef struct {
@@ -84,6 +84,16 @@ typedef struct {
     uint16_t vbe_interface_seg;// VBE interface segment
     uint16_t vbe_interface_off;// VBE interface offset
     uint16_t vbe_interface_len;// VBE interface length
+    uint64_t framebuffer_addr;
+    uint32_t framebuffer_pitch;
+    uint32_t framebuffer_width;
+    uint32_t framebuffer_height;
+    uint8_t framebuffer_bpp;
+    uint8_t framebuffer_type;
+    uint8_t color_info[6];
 } __attribute__((packed)) multiboot_info_t;
+
+multiboot_info_t *_mbi;
+
 
 #endif

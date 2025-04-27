@@ -1,7 +1,8 @@
 /* Multiboot constants */
 .set ALIGN,    1<<0             /* Align modules on page boundaries */
 .set MEMINFO,  1<<1             /* Request memory map from GRUB */
-.set FLAGS,    ALIGN | MEMINFO  /* Combined flags */
+.set MULTIBOOT_VIDEO_MODE, 1<<2 /*| 1<<11*/
+.set FLAGS,    ALIGN | MEMINFO | MULTIBOOT_VIDEO_MODE  /* Combined flags */
 .set MAGIC,    0x1BADB002       /* Multiboot magic number */
 .set CHECKSUM, -(MAGIC + FLAGS) /* Checksum for validation */
 
@@ -64,6 +65,10 @@ _start:
     jmp *%eax
 
 higher_half:
+
+    lgdt gdt_descriptor
+    ljmp $0x8, $2f
+2:
 
     movl $stack_top, %esp
     pushl multiboot_info

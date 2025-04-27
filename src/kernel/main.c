@@ -28,13 +28,39 @@
 
 #include <stdio.h>
 
+// multiboot_info_t *_mbi;
+
+static void init_graphics(){
+    int res;
+    if(res =vbe_init() <0){
+        printf("error init graph can't use os : %08x", res);
+        return;
+    }
+    if(res = vbe_set_mode(1024, 768, 32)){
+        printf("error set vbe mode can't use os : %08x", res);
+        return;
+    }
+    vbe_clear_screen(0xa0ff00);
+    while(1);
+    if(res<0){
+        printf(" no ");
+    }else{       
+        // vbe_set_mode(1024,768,32);
+        printf(" yes ");
+    }
+
+}
+
 static void init_drivers(){
     timer_drv.init();
     keyboard_drv.init();    
+    init_graphics();
+    while(1);
 }
 
 // Kernel initialization
 static void kernel_init(multiboot_info_t* mbi) {
+    _mbi = mbi
     _hide_cursor();
     stdio_init();
     init_gdt();
@@ -42,10 +68,10 @@ static void kernel_init(multiboot_info_t* mbi) {
     // Initialize IDT (sets up exceptions and IRQs)
     idt_init();
     enable_fpu();
+    load_multiboot_mods(mbi);
     init_drivers();
     init_processes();
 
-    load_multiboot_mods(mbi);
 
     mouse_drv.init(80,25);
     mouse_drv.set_speed(20); // Faster movement

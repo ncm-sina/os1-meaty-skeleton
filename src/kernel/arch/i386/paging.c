@@ -138,7 +138,7 @@ uint32_t* create_process_pd() {
 int assign_page_table(uint32_t* page_dir, void* virt_addr, uint32_t flags) {
     if ((uint32_t)virt_addr & 0x3FFFFF) return ASSIGN_PAGE_NOT_ALIGNED;
     uint32_t pd_idx = (uint32_t)virt_addr >> 22;
-    if (pd_idx >= 768 && pd_idx < 1023) return ASSIGN_PAGE_KERNEL_SPACE;
+    if (pd_idx >= 768 && pd_idx < 1023) printf(" pd_idx: %08X vaddr: %08X ", pd_idx, virt_addr);//return ASSIGN_PAGE_KERNEL_SPACE;
 
     uint32_t* pd = get_pagedir_virtaddr((uint32_t)page_dir);
     if (pd[pd_idx] & PAGE_PRESENT) return ASSIGN_PAGE_ALREADY_MAPPED;

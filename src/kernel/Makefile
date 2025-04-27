@@ -31,6 +31,9 @@ LIBS:=$(LIBS) $(KERNEL_ARCH_LIBS)
 
 KERNEL_OBJS=\
 $(KERNEL_ARCH_OBJS) \
+main.o \
+drivers/vbe_asm.o \
+drivers/vbe.o \
 drivers/timer.o \
 drivers/keyboard.o \
 drivers/mouse.o \
@@ -44,7 +47,7 @@ process/syscalls.o \
 misc/syscalls.o \
 basic_tests.o \
 syscall.o \
-main.o \
+
 
 OBJS=\
 $(ARCHDIR)/crti.o \
