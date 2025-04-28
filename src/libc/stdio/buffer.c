@@ -37,13 +37,19 @@ static void itoa(int num, char *buf) {
 // Helper function to convert an integer to a hexadecimal string
 static void itohex(unsigned int num, char *buf, int uppercase, int width, bool use_prefix) {
     const char *digits = uppercase ? "0123456789ABCDEF" : "0123456789abcdef";
-    char temp[9]; // Max 8 digits for 32-bit hex + null
+    char temp[17]; // Max 16 digits for 64-bit hex + null
     int i = 0;
+    int start = 0;
+
+    if (num < 0) {
+        buf[start++] = '-';
+        num = -num;
+    }
 
     if (num == 0) {
         temp[i++] = '0';
     } else {
-        while (num > 0) {
+        while (num > 0 && i<16) {
             temp[i++] = digits[num % 16];
             num /= 16;
         }
@@ -52,12 +58,10 @@ static void itohex(unsigned int num, char *buf, int uppercase, int width, bool u
     // int prefix_len = use_prefix ? 2 : 0; // "0x" or "0X" if prefix is used
     int hex_len = i; // Number of actual hex digits
     int total_len = hex_len > width ? hex_len : width; // Total length including padding
-    int start = 0;
 
     if (use_prefix) {
-        buf[0] = '0';
-        buf[1] = uppercase ? 'X' : 'x';
-        start = 2;
+        buf[start++] = '0';
+        buf[start++] = uppercase ? 'X' : 'x';
     }
 
     for (int j = 0; j < total_len; j++) {
@@ -175,17 +179,28 @@ void format_string(char *output, const char *fstring, va_list args) {
             }
 
             switch (*fstring) {
-                case '%':
+                case '%':                
                     *out++ = '%';
+                    width=0;
+                    use_prefix=0;
+                    precision=6;
                     break;
                 case 's': {
                     const char *str = va_arg(args, const char *);
                     while (*str) *out++ = *str++;
                     break;
                 }
+                case 'u': {
+                    int num = va_arg(args, unsigned int);
+                    char num_buf[20];
+                    itoa(num, num_buf);
+                    char *p = num_buf;
+                    while (*p) *out++ = *p++;
+                    break;
+                }
                 case 'd': {
                     int num = va_arg(args, int);
-                    char num_buf[12];
+                    char num_buf[20];
                     itoa(num, num_buf);
                     char *p = num_buf;
                     while (*p) *out++ = *p++;
@@ -198,7 +213,7 @@ void format_string(char *output, const char *fstring, va_list args) {
                 }
                 case 'x': {
                     unsigned int num = va_arg(args, unsigned int);
-                    char hex_buf[11];
+                    char hex_buf[20];
                     itohex(num, hex_buf, 0, width, use_prefix);
                     char *p = hex_buf;
                     while (*p) *out++ = *p++;
@@ -206,7 +221,7 @@ void format_string(char *output, const char *fstring, va_list args) {
                 }
                 case 'X': {
                     unsigned int num = va_arg(args, unsigned int);
-                    char hex_buf[11];
+                    char hex_buf[20];
                     itohex(num, hex_buf, 1, width, use_prefix);
                     char *p = hex_buf;
                     while (*p) *out++ = *p++;

@@ -46,6 +46,7 @@ string/memset.o \
 string/strlen.o \
 string/strcmp.o \
 string/stricmp.o \
+string/strncmp.o \
 errno.o \
 fcntl.o \
 mman.o \

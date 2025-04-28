@@ -19,7 +19,7 @@ OBJ=""
 DESTDIR?=
 PREFIX?=/usr/local
 EXEC_PREFIX?=$(PREFIX)
-SHAREDDIR?=$(EXEC_PREFIX)/usr/share
+SHAREDDIR?=$(EXEC_PREFIX)/share
 INCLUDEDIR?=$(PREFIX)/include
 
 CFLAGS:=$(CFLAGS) -ffreestanding -Wall -Wextra
@@ -44,8 +44,8 @@ LINK_LIST=\
 $(LDFLAGS) \
 $(OBJS) \
 
-.PHONY: all clean install install-headers install-kernel
-.SUFFIXES: .o .c .S
+.PHONY: all clean install copy-resources  fonts images icons themes locale
+.SUFFIXES: .o .c .S .asm
 
 all: 16bit-executer/16bit-executer.mod
 
@@ -79,21 +79,22 @@ install: copy-resources
 
 fonts:
 	mkdir -p $(DESTDIR)$(SHAREDDIR)/fonts
-	cp ./fonts/* $(DESTDIR)$(SHAREDDIR)/fonts -fr
+	cp fonts/. $(DESTDIR)$(SHAREDDIR)/fonts -fr
 images:
 	mkdir -p $(DESTDIR)$(SHAREDDIR)/images
-	cp ./images/* $(DESTDIR)$(SHAREDDIR)/images -fr
+	cp images/. $(DESTDIR)$(SHAREDDIR)/images -fr
 icons:
 	mkdir -p $(DESTDIR)$(SHAREDDIR)/icons
-	cp ./icons/* $(DESTDIR)$(SHAREDDIR)/icons -fr
+	cp icons/. $(DESTDIR)$(SHAREDDIR)/icons -fr
 themes:
 	mkdir -p $(DESTDIR)$(SHAREDDIR)/themes
-	cp ./themes/* $(DESTDIR)$(SHAREDDIR)/themes -fr
+	cp themes/. $(DESTDIR)$(SHAREDDIR)/themes -fr
 locale:
 	mkdir -p $(DESTDIR)$(SHAREDDIR)/locale
-	cp ./locale/* $(DESTDIR)$(SHAREDDIR)/locale -fr
+	cp locale/. $(DESTDIR)$(SHAREDDIR)/locale -fr
 
 
 copy-resources: fonts images icons themes locale
+	mkdir -p $(DESTDIR)$(SHAREDDIR)
 
 -include $(OBJS:.o=.d)

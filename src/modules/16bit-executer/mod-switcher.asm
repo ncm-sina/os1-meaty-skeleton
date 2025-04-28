@@ -25,7 +25,6 @@ _mstart:
     mov eax, ebp
     mov [_ebp], eax
 
-
     mov ax, DATA32_SEG
     mov ds, ax
     mov es, ax
@@ -36,7 +35,6 @@ _mstart:
 
     ; Step 1: Disable interrupts
     cli
-
 
     ; Step 2: Disable paging
     mov eax, cr0
@@ -95,14 +93,32 @@ real_mode:
     ; Step 9: call function
     call 0x2000
 
-    mov [_ret_val], ax
-    mov bx, 0
-    call print_h16
+    ; mov ax, [0x600A]
+    ; mov es, ax
+    ; mov ax, [0x6000]
+    ; mov bx, [0x6002]
+    ; mov cx, [0x6004]
+    ; mov dx, [0x6006]
+    ; mov di, [0x6008]
+
+    ; mov ax, 0x900
+    ; mov es, ax
+    ; mov ax, 0x4f00
+    ; mov di, 0x0
+    ; int 0x10                ; BIOS video interrupt
+    ; mov [0x6000], ax
+
+    ; mov bx, 0x0000
+    ; call print_h16
+    ; jmp $
+
+    ; mov [_ret_val], ax
+    ; mov bx, 0
+    ; call print_h16
 
     cli
 
     ; Step 10: enable protected mode and paging
-
 
     mov eax, cr0
     or  eax, 0x1
@@ -119,12 +135,6 @@ protected_mode:
     mov gs, ax
     mov ss, ax
 
-    mov edi, VGA_BUFFER + 0xA0     ; VGA text buffer address
-    mov al, '1'             ; Character to print
-    mov ah, 0x0F            ; Attribute: white text on black background
-    mov [edi], ax           ; Write character + attribute
-
-
     mov eax, [_cr3]
     mov cr3, eax
 
@@ -134,24 +144,27 @@ protected_mode:
 
     jmp CODE32_SEG:enabled_paging
 enabled_paging:
-
-    mov edi, VGA_BUFFER + 0xA2     ; VGA text buffer address
-    mov al, '2'             ; Character to print
-    mov ah, 0x0F            ; Attribute: white text on black background
-    mov [edi], ax           ; Write character + attribute
-
-
     lidt [_idt_descriptor]
     jmp CODE32_SEG:enabled_idt
 enabled_idt:
 
-    mov edi, VGA_BUFFER + 0xA4     ; VGA text buffer address
-    mov al, '3'             ; Character to print
-    mov ah, 0x0F            ; Attribute: white text on black background
-    mov [edi], ax           ; Write character + attribute
-
+;     lgdt [_gdt_descriptor]
+;     jmp CODE32_SEG:enabled_idt
+; enabled_idt:
+;     mov ax, DATA32_SEG
+;     mov ds, ax
+;     mov es, ax
+;     mov fs, ax
+;     mov gs, ax
+;     mov ss, ax
 
     sti
+
+    xor eax, eax
+    movzx eax, word [0x6000]
+
+    mov ebx, 0
+    ; call print_h32  
 
     mov ebp, [_esp]
     mov esp, ebp
@@ -281,42 +294,44 @@ print_h16:
 print_h32:
     pusha                  ; Save all registers
     push es                ; Save ES
-    mov esi, eax           ; Copy EAX to ESI
+    mov esi, eax           ; Copy EAX to ESI (value to print)
     mov ecx, 8             ; 8 hex digits
 
     ; Calculate VGA offset: (y * 80 + x) * 2
     xor eax, eax
-    mov al, bl             ; y
+    mov al, bl             ; y (from BL)
     mov edx, 80
     mul edx                ; EAX = y * 80
-    xor ebx, ebx
-    mov bl, bh             ; x (BH to BL)
+    movzx ebx, bh          ; x (from BH, zero-extend)
     add eax, ebx           ; EAX = y * 80 + x
     shl eax, 1             ; EAX = (y * 80 + x) * 2
     mov edi, eax           ; EDI = VGA offset
 
-    mov ax, 0xB800         ; VGA text buffer
-    mov es, ax
+    add edi, 0xB8000         ; VGA text buffer segment
+
+    mov ax, DATA32_SEG     ; Set ES to 32-bit data segment
+    mov es, ax    
 
     ; Print "0x"
-    mov word [es:edi], 0x0F30 ; '0'
+    mov word [es:edi], 0x0F30 ; '0' (white on black)
     add edi, 2
     mov word [es:edi], 0x0F78 ; 'x'
     add edi, 2
 
 .print_loop:
-    rol esi, 4             ; Rotate left 4 bits
-    mov eax, esi            ; Get ESI (instead of SIL)
-    and eax, 0x0F           ; Mask to lowest 4 bits
-    cmp al, 0x0A           ; If < 10, add '0'
+    rol esi, 4             ; Rotate left 4 bits to get next nibble
+    mov eax, esi           ; Copy ESI to EAX
+    and eax, 0x0F          ; Mask to lowest 4 bits
+    cmp al, 0x0A           ; If >= 10, convert to 'A'-'F'
     jb .digit
-    add al, 0x07           ; Else add 'A'-10
+    add al, 0x07           ; Add offset for 'A'-'F'
 .digit:
-    add al, 0x30           ; Convert to ASCII
-    mov ah, 0x0F           ; White on black
-    mov [es:edi], ax       ; Write to VGA
-    add edi, 2             ; Next position
-    loop .print_loop
+    add al, 0x30           ; Convert to ASCII ('0'-'9' or 'A'-'F')
+    mov ah, 0x0F           ; White on black attribute
+    mov [es:edi], ax       ; Write character to VGA buffer
+    add edi, 2             ; Move to next VGA position
+    dec ecx                ; Decrement digit counter
+    jnz .print_loop        ; Continue if more digits
 
     pop es                 ; Restore ES
     popa                   ; Restore registers
@@ -329,6 +344,35 @@ print_h32:
 ; print_h32:
 ;     print_hex_32 1,1
 ;     ret
+
+
+; 32 bit print char
+
+;     VGA_BUFFER equ 0xB8000
+;     cli			; Disable interrupts.
+;     mov edi, VGA_BUFFER     ; VGA text buffer address
+;     mov al, 'A'             ; Character to print
+;     mov ah, 0x0F            ; Attribute: white text on black background
+;     mov [edi], ax           ; Write character + attribute
+;     jmp $
+
+
+
+; 16 bit:
+
+;     ; Set up segment registers
+;     xor ax, ax          ; AX = 0
+;     mov ds, ax          ; Data segment = 0
+;     mov es, ax          ; Extra segment = 0
+
+;     ; Write character to VGA buffer
+;     mov ax, 0xB800      ; VGA text buffer base address
+;     mov es, ax          ; ES = 0xB800
+;     xor di, di          ; DI = 0 (offset in VGA buffer)
+;     mov al, 'A'         ; Character to print
+;     mov ah, 0x0F        ; Attribute: white text on black background
+;     mov [es:di], ax     ; Write character + attribute to VGA buffer
+;     jmp $
 
 
 

@@ -22,12 +22,12 @@
 #define _DI 0x6008
 #define _ES 0x600A
 
-uint16_t *vbe_bc_ax=_AX;
-uint16_t *vbe_bc_bx=_BX;
-uint16_t *vbe_bc_cx=_CX;
-uint16_t *vbe_bc_dx=_DX;
-uint16_t *vbe_bc_di=_DI;
-uint16_t *vbe_bc_es=_ES;
+uint16_t *vbe_bc_ax=(uint16_t *) _AX;
+uint16_t *vbe_bc_bx=(uint16_t *) _BX;
+uint16_t *vbe_bc_cx=(uint16_t *) _CX;
+uint16_t *vbe_bc_dx=(uint16_t *) _DX;
+uint16_t *vbe_bc_di=(uint16_t *) _DI;
+uint16_t *vbe_bc_es=(uint16_t *) _ES;
 
 extern uint32_t *_vbe_bc_text_start;
 extern uint32_t *_vbe_bc_text_end;
@@ -37,9 +37,9 @@ extern uint32_t *_vbe_bc_data_end;
 
 
 // Global pointers
-VbeInfoBlock* vbe_info = (VbeInfoBlock*) VBE_INFO;
-ModeInfoBlock* mode_info = (ModeInfoBlock*) VBE_MINFO;
-// uint32_t* framebuffer = (uint32_t*) FRAMEBUFFER_VADDR;
+vbe_info_block_t* vbe_info = (vbe_info_block_t*) VBE_INFO;
+vbe_mode_info_t* mode_info = (vbe_mode_info_t*) VBE_MINFO;
+uint32_t* framebuffer = (uint32_t*) FRAMEBUFFER_VADDR;
 static uint64_t framebuffer_addr; // framebuffer physical address or dynamic vaddr (we should map this to a fixed address later)
 
 // External page table mapping function (you must implement)
@@ -50,51 +50,24 @@ static uint64_t framebuffer_addr; // framebuffer physical address or dynamic vad
 #endif
 
 uint8_t vbe_run_bin[VBE_RUN_SIZE] = {
-    0xa1, 0x0a, 0x60, 0x89, 0xc6, 0xa1, 0x00, 0x60, 
-    0x8b, 0x1e, 0x02, 0x60, 0x8b, 0x0e, 0x04, 0x60, 
-    0x8b, 0x16, 0x06, 0x60, 0x8b, 0x3e, 0x08, 0x60, 
-    0xcd, 0x10, 0xc3
+
+	0xa1, 0x0a, 0x60, 0x8e, 0xc0, 0xa1, 0x00, 0x60, 
+	0x8b, 0x1e, 0x02, 0x60, 0x8b, 0x0e, 0x04, 0x60, 
+	0x8b, 0x16, 0x06, 0x60, 0x8b, 0x3e, 0x08, 0x60, 
+	0xcd, 0x10, 0xa3, 0x00, 0x60, 0x89, 0x1e, 0x02, 
+	0x60, 0x89, 0x0e, 0x04, 0x60, 0x89, 0x16, 0x06, 
+	0x60, 0x89, 0x3e, 0x08, 0x60, 0x8c, 0xc0, 0xa3, 
+	0x0a, 0x60, 0xa1, 0x00, 0x60, 0xc3, 
+
 };
 
-
-// Initialize VBE and check support
-uint32_t vbe_init(void) {
-    // Clear vbe_info and set signature
-    for (int i = 0; i < sizeof(VbeInfoBlock); i++) {
-        ((uint8_t*)vbe_info)[i] = 0;
-    }
-    vbe_info->signature[0] = 'V';
-    vbe_info->signature[1] = 'E';
-    vbe_info->signature[2] = 'S';
-    vbe_info->signature[3] = 'A';
-
-    struct bios_call bc = {
-        .eax = 0x4F00,
-        .es = (VBE_INFO >> 16) << 12 ,
-        .di = VBE_INFO & 0xFFFF
-    };
-
-    // Call INT 0x10, AX=0x4F00 to get VBE info
-    int res = vbe_bios_call(&bc);
-    if (bc.eax != 0x004F) return -1;
-
-
-    if (result != 0x004F || vbe_info->version < 0x0200) {
-        return -2; // VBE not supported or version < 2.0
-    }
-
-    if (strncmp(vib->signature, "VESA", 4) != 0) return -1;
-
-    return 0;
-}
-
-uint32_t vbe_bios_call(vbe_bios_call_t *bc){
-    *vbe_bc_ax=bc.ax;
-    *vbe_bc_bx=bc.bx;
-    *vbe_bc_cx=bv.cx;
-    *vbe_bc_dx=bc.dx;
-    *vbe_bc_es=bc.es;
-    *vbe_bc_di=bc.di;
+static uint32_t vbe_bios_call(vbe_bios_call_t *bc){
+    *vbe_bc_ax=bc->ax;
+    *vbe_bc_bx=bc->bx;
+    *vbe_bc_cx=bc->cx;
+    *vbe_bc_dx=bc->dx;
+    *vbe_bc_es=bc->es;
+    *vbe_bc_di=bc->di;
     // *vbe_bc_di=es_di & 0xFFFF;
     // *vbe_bc_es=(es_di - *vbe_bc_di) >> 4;
     // *vbe_bc_es=es_di >> 4;
@@ -108,68 +81,122 @@ uint32_t vbe_bios_call(vbe_bios_call_t *bc){
         .data_size = 0 //set to 0 to disable memcopy //((uint32_t) &_vbe_bc_data_end) - ((uint32_t) &_vbe_bc_data_start)
     };
 
-    return call_rm_program(bin_info);
+    uint32_t ret = call_rm_program(bin_info);
+    bc->ax= *vbe_bc_ax;
+    bc->bx= *vbe_bc_bx;
+    bc->cx= *vbe_bc_cx;
+    bc->dx= *vbe_bc_dx;
+    bc->es= *vbe_bc_es;
+    bc->di= *vbe_bc_di;
+    return ret;    
 }
+
+
+// Initialize VBE and check support
+int32_t vbe_init(void) {
+    // Clear vbe_info and set signature
+    for (int i = 0; i < sizeof(vbe_info_block_t); i++) {
+        ((uint8_t*)vbe_info)[i] = 0;
+    }
+    // vbe_info->signature[0] = 'V';
+    // vbe_info->signature[1] = 'E';
+    // vbe_info->signature[2] = 'S';
+    // vbe_info->signature[3] = 'A';
+
+    vbe_bios_call_t bc = {
+        .ax = 0x4F00,
+        .es = 0x0900,
+        .di = 0x0000
+        // .ax = 0x4F00,
+        // .es = 0,//(VBE_INFO >> 16) << 12 ,
+        // .di = 0x9000 //VBE_INFO & 0xFFFF
+    };
+
+    // Call INT 0x10, AX=0x4F00 to get VBE info
+    uint32_t res = vbe_bios_call(&bc);
+    uint32_t *res2 = 0x6000;
+    uint32_t res3 = *res2;
+    // if (res != 0x004F) return -1;
+
+    // vbe_set_text_mode();
+    // printf("abc res: %d %08x res2: %d %08x res2: %d %08x\n", res, res, *res2, *res2, res3, res3);
+
+    if (res != 0x004F || vbe_info->version < 0x0200) {
+        return -2; // VBE not supported or version < 2.0
+    }
+
+    if (strncmp(vbe_info->signature, "VESA", 4) != 0) return -3;
+
+    if (!(_mbi->flags & (1 << 12))) return -5;
+    framebuffer_addr = _mbi->framebuffer_addr; // Physical address
+    framebuffer = (uint32_t *) framebuffer_addr;
+    // return res;
+    return 0;
+}
+
 
 // Set a video mode
 uint32_t vbe_set_mode(uint16_t width, uint16_t height, uint8_t bpp) {
     // Get mode list from vbe_info
-    uint16_t* mode_list = (uint16_t*)(vbe_info->video_mode_ptr & 0xFFFF);
+    uint16_t* mode_list = (uint16_t*)(vbe_info->video_modes & 0xFFFF);
     uint16_t target_mode = 0;
 
     for (int i = 0; mode_list[i] != 0xFFFF; i++) {
-        struct bios_call bc = {
-            .eax = 0x4F01,
-            .ecx = mode_list[i],
+        vbe_bios_call_t bc = {
+            .ax = 0x4F01,
+            .cx = mode_list[i],
             .es = (VBE_MINFO >> 16) << 12 ,
             .di = VBE_MINFO & 0xFFFF
         };        
         if (vbe_bios_call(&bc) != 0x004F) continue;
 
-        if (info.width == width && info.height == height && info.bpp == bpp &&
-            (info.attributes & 0x80)) { // Linear framebuffer supported
-            target_mode = modes[i] | 0x4000; // Enable LFB
+        if (mode_info->width == width && mode_info->height == height && mode_info->bpp == bpp &&
+            (mode_info->attributes & 0x80)) { // Linear framebuffer supported
+            target_mode = mode_list[i] | 0x4000; // Enable LFB
             break;
         }
     }
 
     if (target_mode == 0) return -1;
 
-    struct bios_call bc = {
-        .eax = 0x4F02,
-        .ebx = target_mode
+    vbe_bios_call_t bc = {
+        .ax = 0x4F02,
+        .bx = target_mode
     };
-    int res = vbe_bios_call(&bc);
-    if (bc.eax != 0x004F) return -1;
+    int32_t res = vbe_bios_call(&bc);
+    if (bc.ax != 0x004F) return -1;
 
     // Get mode info to verify framebuffer
-    bc.eax = 0x4F01;
-    bc.ecx = target_mode & 0x1FFF; // Clear LFB bit
-    bc.es = (VBE_MINFO >> 16) << 12 ,
-    bc.di = VBE_MINFO & 0xFFFF
-    if (vbe_bios_call(&bc) != 0x004F) return -1;
+    bc.ax = 0x4F01;
+    bc.cx = target_mode & 0x1FFF; // Clear LFB bit
+    bc.es = (VBE_MINFO >> 16) << 12 ;
+    bc.di = VBE_MINFO & 0xFFFF;
+    // if (vbe_bios_call(&bc) != 0x004F) return -1;
 
     if (!(_mbi->flags & (1 << 12))) return -1;
     framebuffer_addr = _mbi->framebuffer_addr; // Physical address
+    framebuffer = (uint32_t *) framebuffer_addr;
 
     // TODO: Map to 0xD0000000 in page tables
     // map_page(0xD0000000, info.framebuffer, 0x3);
     // TODO: Map to 0xD0000000 in page tables
     // map_page(0xD0000000, info.framebuffer, 0x3);
+    // return res;
     return 0;
 }
 
 // Get mode information
-uint32_t vbe_get_mode_info(uint16_t mode, ModeInfoBlock* info) {
-    struct bios_call bc = {
-        .eax = 0x4F01,
-        .ecx = mode & 0x1FFF, // Clear LFB bit
-        .es = VBE_MINFO >> 4,
+uint32_t vbe_get_mode_info(uint16_t mode, vbe_mode_info_t* info) {
+    vbe_bios_call_t bc = {
+        .ax = 0x4F01,
+        .cx = mode & 0x1FFF, // Clear LFB bit
+        .es = (VBE_MINFO >> 16) << 12 ,
         .di = VBE_MINFO & 0xFFFF
     };
-    int res = vbe_bios_call(&bc);
-    if (bc.eax != 0x004F) return -1;
-    memcpy(info, mode_info, sizeof(ModeInfoBlock));
+    int32_t res = vbe_bios_call(&bc);
+    if (res != 0x004F) return -1;
+    memcpy(info, mode_info, sizeof(vbe_mode_info_t));
+    // return res;
     return 0;
 }
 
@@ -193,6 +220,26 @@ void vbe_clear_screen(uint32_t color) {
     for (uint32_t i = 0; i < mode_info->width * mode_info->height; i++) {
         framebuffer[i] = color;
     }
+}
+
+int vbe_set_text_mode(void) {
+    vbe_bios_call_t bc = {
+        .ax = 0x0003
+    };
+    int32_t res = vbe_bios_call(&bc);
+    if (vbe_is_text_mode() != 1) return -1;
+    return 0;
+    // return (res == 0x004F || res == 0) ? 0 : -1;
+}
+
+
+int vbe_is_text_mode(void) {
+    vbe_bios_call_t bc = {
+        .ax = 0x0F03  // Function 0x0F: Get current video mode
+    };
+    int32_t res = vbe_bios_call(&bc);
+    uint8_t mode = res & 0xFF; // AL = video mode
+    return (mode == 0x03 || mode == 0x02 || mode == 0x07) ? 1 : 0;
 }
 
 // Draw a pixel

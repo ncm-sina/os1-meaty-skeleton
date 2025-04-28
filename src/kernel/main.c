@@ -31,23 +31,46 @@
 // multiboot_info_t *_mbi;
 
 static void init_graphics(){
-    int res;
-    if(res =vbe_init() <0){
-        printf("error init graph can't use os : %08x", res);
-        return;
+    int32_t res,res2, res3;
+    // res = vbe_is_text_mode();
+    // res2 = vbe_set_text_mode();
+    // res3 = vbe_is_text_mode();
+    // printf("aaa: %08x %d | bbb: %08x %d | ccc: %08x %d", res, res, res2, res2, res3, res3);
+    if (_mbi->flags & (1 << 11)) {
+        if(res2 = vbe_set_text_mode()) printf("1error setting text mode err:%08x err2: %d \n", res2, res2);
+        printf("VBE: control=0x%08X, mode=0x%08X", _mbi->vbe_control_info, _mbi->vbe_mode_info);
+    }else{
+        if(res2 = vbe_set_text_mode()) printf("2error setting text mode err:%08x err2: %d \n", res2, res2);
+        printf("f1\n");
     }
-    if(res = vbe_set_mode(1024, 768, 32)){
-        printf("error set vbe mode can't use os : %08x", res);
-        return;
+    if (_mbi->flags & (1 << 12)) {
+        if(res2 = vbe_set_text_mode()) printf("3error setting text mode err:%08x err2: %d \n", res2, res2);
+        printf("Framebuffer: addr=0x%11X \n", _mbi->framebuffer_addr);
+    }else{
+        if(res2 = vbe_set_text_mode()) printf("4error setting text mode err:%08x err2: %d \n", res2, res2);
+        printf("f2\n");
+    }   
+    // while(1);
+    if((res = vbe_init()) <0){
+        if(res2 = vbe_set_text_mode()) printf("5error setting text mode err:%08x err2: %d \n", res2, res2);
+        printf("error init graph can't use os : %08x %d", res, res);
+        // return;
+    }
+    if((res = vbe_set_mode(1024, 768, 32))){
+        if(res2 = vbe_set_text_mode()) printf("6error setting text mode err:%08x err2: %d \n", res2, res2);
+        printf("error set vbe mode can't use os :%08x %d", res, res);
+        // return;
     }
     vbe_clear_screen(0xa0ff00);
-    while(1);
     if(res<0){
+        if((res2 = vbe_set_text_mode()) < 0) printf("7error setting text mode err:%08x \n",res2);
         printf(" no ");
     }else{       
         // vbe_set_mode(1024,768,32);
+        if((res2 = vbe_set_text_mode()) < 0) printf("8error setting text mode err:%08x \n",res2);
         printf(" yes ");
     }
+    while(1);
 
 }
 
@@ -59,16 +82,16 @@ static void init_drivers(){
 }
 
 // Kernel initialization
-static void kernel_init(multiboot_info_t* mbi) {
-    _mbi = mbi
+static void kernel_init(multiboot_info_t* _mbi) {
+    _mbi = _mbi;
     _hide_cursor();
     stdio_init();
     init_gdt();
-    init_paging(mbi);
+    init_paging(_mbi);
     // Initialize IDT (sets up exceptions and IRQs)
     idt_init();
     enable_fpu();
-    load_multiboot_mods(mbi);
+    load_multiboot_mods(_mbi);
     init_drivers();
     init_processes();
 
@@ -87,8 +110,8 @@ static void kernel_init(multiboot_info_t* mbi) {
 }
 
 // Kernel main function
-void kernel_main(multiboot_info_t* mbi) {
-    kernel_init(mbi);
+void kernel_main(multiboot_info_t* _mbi) {
+    kernel_init(_mbi);
 
     
     show_processes(0, 10); // Show first 10 processes
@@ -96,7 +119,7 @@ void kernel_main(multiboot_info_t* mbi) {
     b_test_mouse();
     // b_test_isr_driver();
     // b_test_idt();
-    // b_test_mbi(mbi);
+    // b_test_mbi(_mbi);
     // b_test_mconio();
     // b_test_mconio_scroll();    
     // b_test_a20();
