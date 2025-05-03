@@ -23,11 +23,11 @@
 #define MULTIBOOT_INFO_VIDEO_INFO (1 << 11) // 0x800: video info
 
 /* Memory map entry types */
-#define MULTIBOOT_MEMORY_AVAILABLE  1
-#define MULTIBOOT_MEMORY_RESERVED   2
-#define MULTIBOOT_MEMORY_ACPI       3
-#define MULTIBOOT_MEMORY_NVS        4
-#define MULTIBOOT_MEMORY_BADRAM     5
+#define MULTIBOOT_MEMORY_AVAILABLE  1 // Usable RAM
+#define MULTIBOOT_MEMORY_RESERVED   2 // Reserved, not usable
+#define MULTIBOOT_MEMORY_ACPI       3 // ACPI reclaimable memory
+#define MULTIBOOT_MEMORY_NVS        4 // Non-volatile storage (e.g., ACPI NVS)
+#define MULTIBOOT_MEMORY_BADRAM     5 // Defective RAM, not usable
 
 /* Multiboot header structure (static, pre-boot) */
 typedef struct {
@@ -93,7 +93,6 @@ typedef struct {
     uint8_t color_info[6];
 } __attribute__((packed)) multiboot_info_t;
 
-multiboot_info_t *_mbi;
-
+extern multiboot_info_t *_mbi;
 
 #endif

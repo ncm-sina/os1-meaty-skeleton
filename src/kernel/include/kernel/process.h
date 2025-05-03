@@ -67,7 +67,7 @@ extern ProcessState process_state;
 void show_processes(int start, int count);
 void init_processes();
 uint32_t create_process(binary_info_t* bin);
-multiboot_module_t get_multiboot_mod_by_name(multiboot_info_t* mbi, const char* name);
+multiboot_module_t* get_multiboot_mod_by_name(multiboot_info_t* mbi, const char* name);
 void load_multiboot_mod(multiboot_module_t* mod);
 void load_multiboot_mods(multiboot_info_t* mbi);
 void switch_to_process(uint32_t pid);

@@ -54,6 +54,7 @@ int printf(const char *format, ...) {
                         else if (num >= 40 && num <= 47) bg = num - 40;
                         else if (num >= 100 && num <= 107) bg = num - 100 + 8;
                         num = 0;
+                        valid=false;
                     }
                     i++;
                 }

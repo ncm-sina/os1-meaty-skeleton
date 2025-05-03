@@ -57,94 +57,95 @@ void show_processes(int start, int count) {
 }
 
 void init_processes() {
-    for (int i = 0; i < MAX_PROCESSES; i++) {
-        process_state.process_table[i].pid = 0;
-        process_state.process_table[i].page_dir = NULL;
-        process_state.process_table[i].state = 0;
-        process_state.process_table[i].priority = 0;
-        process_state.process_table[i].time_slice = 10;
-        process_state.process_table[i].kernel_esp = 0;
-        process_state.process_table[i].regs = (Registers){0};
-    }
-    process_state.process_table[0].pid = 1; // pid 1 means kernel
-    process_state.process_table[0].page_dir = pagedir;
-    process_state.process_table[0].state = 1;
-    process_state.process_table[0].priority = 1;
+    printf(" init processes ");
+    // for (int i = 0; i < MAX_PROCESSES; i++) {
+    //     process_state.process_table[i].pid = 0;
+    //     process_state.process_table[i].page_dir = NULL;
+    //     process_state.process_table[i].state = 0;
+    //     process_state.process_table[i].priority = 0;
+    //     process_state.process_table[i].time_slice = 10;
+    //     process_state.process_table[i].kernel_esp = 0;
+    //     process_state.process_table[i].regs = (Registers){0};
+    // }
+    // process_state.process_table[0].pid = 1; // pid 1 means kernel
+    // process_state.process_table[0].page_dir = pagedir;
+    // process_state.process_table[0].state = 1;
+    // process_state.process_table[0].priority = 1;
     // Kernel process doesn't need full register state here
 }
 
-uint32_t create_process(binary_info_t* bin) {
-    // Validate input
-    if (!bin || bin->start_addr >= bin->end_addr) return 0;
+// uint32_t create_process(binary_info_t* bin) {
+//     // Validate input
+//     if (!bin || bin->start_addr >= bin->end_addr) return 0;
 
-    // Find free process slot
-    for (int i = 0; i < MAX_PROCESSES; i++) {
-        if (process_state.process_table[i].pid == 0) {
-            Process* proc = &process_state.process_table[i];
-            proc->pid = process_state.next_pid++;
-            proc->page_dir = create_process_pd();
-            proc->state = PROCESS_READY;
-            proc->priority = 1;
-            proc->time_slice = 10;
+//     // Find free process slot
+//     for (int i = 0; i < MAX_PROCESSES; i++) {
+//         if (process_state.process_table[i].pid == 0) {
+//             Process* proc = &process_state.process_table[i];
+//             proc->pid = process_state.next_pid++;
+//             proc->page_dir = create_process_pd();
+//             proc->state = PROCESS_READY;
+//             proc->priority = 1;
+//             proc->time_slice = 10;
 
-            // Calculate size and pages for binary
-            uint32_t size = bin->end_addr - bin->start_addr;
-            uint32_t code_pages = (size + 4095) / 4096;
+//             // Calculate size and pages for binary
+//             uint32_t size = bin->end_addr - bin->start_addr;
+//             uint32_t code_pages = (size + 4095) / 4096;
 
-            // Map code/data at 0x1000000
-            for (uint32_t j = 0; j < code_pages; j++) {
-                assign_page_table(proc->page_dir, (void*)(0x1000000 + j * 4096),
-                                 PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
-            }
+//             // Map code/data at 0x1000000
+//             for (uint32_t j = 0; j < code_pages; j++) {
+//                 assign_page_table(proc->page_dir, (void*)(0x1000000 + j * 4096),
+//                                  PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
+//             }
 
-            // Copy binary to 0x1000000
-            switch_page_directory(proc->page_dir);
-            uint32_t* user_mem = (uint32_t*)0x1000000;
-            for (uint32_t j = 0; j < size / 4; j++) {
-                user_mem[j] = ((uint32_t*)bin->start_addr)[j];
-            }
-            // Handle remaining bytes (if size not multiple of 4)
-            for (uint32_t j = (size / 4) * 4; j < size; j++) {
-                ((uint8_t*)0x1000000)[j] = ((uint8_t*)bin->start_addr)[j];
-            }
+//             // Copy binary to 0x1000000
+//             switch_page_directory(proc->page_dir);
+//             uint32_t* user_mem = (uint32_t*)0x1000000;
+//             for (uint32_t j = 0; j < size / 4; j++) {
+//                 user_mem[j] = ((uint32_t*)bin->start_addr)[j];
+//             }
+//             // Handle remaining bytes (if size not multiple of 4)
+//             for (uint32_t j = (size / 4) * 4; j < size; j++) {
+//                 ((uint8_t*)0x1000000)[j] = ((uint8_t*)bin->start_addr)[j];
+//             }
 
-            switch_page_directory(pagedir);
+//             switch_page_directory(pagedir);
 
-            // Map 1MB stack at 0x13F0000-0x1400000
-            assign_page_table(proc->page_dir, (void*)0x13F0000,
-                             PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
+//             // Map 1MB stack at 0x13F0000-0x1400000
+//             assign_page_table(proc->page_dir, (void*)0x13F0000,
+//                              PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
 
-            // Kernel stack (unique per process)
-            assign_page_table(pagedir, (void*)(0xC0200000 + i * 0x4000),
-                             PAGE_PRESENT | PAGE_WRITE);
-            proc->kernel_esp = 0xC0200000 + i * 0x4000 + 0x4000;
+//             // Kernel stack (unique per process)
+//             assign_page_table(pagedir, (void*)(0xC0200000 + i * 0x4000),
+//                              PAGE_PRESENT | PAGE_WRITE);
+//             proc->kernel_esp = 0xC0200000 + i * 0x4000 + 0x4000;
 
-            // Initialize registers
-            proc->regs.eip = 0x1000000;
-            proc->regs.esp = 0x1400000;
-            proc->regs.cs = 0x1B;
-            proc->regs.ds = 0x23;
-            proc->regs.es = 0x23;
-            proc->regs.fs = 0x23;
-            proc->regs.gs = 0x23;
-            proc->regs.ss = 0x23;
-            proc->regs.eflags = 0x202;
-            proc->regs.eax = 0;
-            proc->regs.ebx = 0;
-            proc->regs.ecx = 0;
-            proc->regs.edx = 0;
-            proc->regs.esi = 0;
-            proc->regs.edi = 0;
-            proc->regs.ebp = 0;
+//             // Initialize registers
+//             proc->regs.eip = 0x1000000;
+//             proc->regs.esp = 0x1400000;
+//             proc->regs.cs = 0x1B;
+//             proc->regs.ds = 0x23;
+//             proc->regs.es = 0x23;
+//             proc->regs.fs = 0x23;
+//             proc->regs.gs = 0x23;
+//             proc->regs.ss = 0x23;
+//             proc->regs.eflags = 0x202;
+//             proc->regs.eax = 0;
+//             proc->regs.ebx = 0;
+//             proc->regs.ecx = 0;
+//             proc->regs.edx = 0;
+//             proc->regs.esi = 0;
+//             proc->regs.edi = 0;
+//             proc->regs.ebp = 0;
             
-            return proc->pid;
-        }
-    }
-    return 0;
-}
+//             return proc->pid;
+//         }
+//     }
+//     return 0;
+// }
 
-static void print_module_info(multiboot_module_t mod){
-    printf("\n mod_start: %08X | mod_end: %08X | cmdline: %s ", mod.mod_start, mod.mod_end, mod.cmdline);
+static void print_module_info(multiboot_module_t *mod){
+    printf("\n mod_start: %08X | mod_end: %08X | cmdline: %s ", mod->mod_start, mod->mod_end, mod->cmdline);
 }
 
 // static void print_module_header(ModuleHeader_t header){
@@ -158,13 +159,13 @@ void load_multiboot_mod(multiboot_module_t* mod) {
         .start_addr = mod->mod_start,
         .end_addr = mod->mod_end
     };
-    uint32_t pid = create_process(&bin);
-    if (pid) {
-        printf("Process %d created for module\n", pid);
-    }
+    // uint32_t pid = create_process(&bin);
+    // if (pid) {
+    //     printf("Process %d created for module\n", pid);
+    // }
 }
 
-multiboot_module_t get_multiboot_mod_by_name(multiboot_info_t* mbi, const char* name) {
+multiboot_module_t* get_multiboot_mod_by_name(multiboot_info_t* mbi, const char* name) {
     if (!(mbi->flags & MULTIBOOT_INFO_MODS) || mbi->mods_count == 0 || !name) {
         printf("No modules or invalid name\n");
         return;
@@ -172,25 +173,27 @@ multiboot_module_t get_multiboot_mod_by_name(multiboot_info_t* mbi, const char* 
     multiboot_module_t* mods = (multiboot_module_t*)mbi->mods_addr;
     for (uint32_t i = 0; i < mbi->mods_count; i++) {
         if (mods[i].cmdline && strcmp((const char*)mods[i].cmdline, name) == 0) {
-            printf("Found module: %s at 0x%x\n", name, mods[i].mod_start);
+            printf("Found module: %s at 0x%08x\n", name, mods[i].mod_start);
             // load_multiboot_mod(&mods[i]);
 
-            return mods[i];
+            return &mods[i];
         }
     }
     printf("Module %s not found\n", name);
 }
 
 void load_16bit_executer(multiboot_info_t* mbi){
-    multiboot_module_t mod = {0};
+    multiboot_module_t *mod = 0;
     mod = get_multiboot_mod_by_name(mbi, "16bit-executer.mod");
+    printf(" 1 ");
     print_module_info(mod);
-    if (mod.mod_start >= mod.mod_end) {
+    printf(" 2 ");
+    if (mod->mod_start >= mod->mod_end) {
         printf("Invalid module\n");
         return;
     }
 
-    // ModuleHeader* header = (ModuleHeader*)&mod.mod_start;
+    // ModuleHeader* header = (ModuleHeader*)&mod->mod_start;
     // print_module_header(*header);
 
     // if (header->text_end <= header->text_start || header->data_end <= header->data_start) {
@@ -201,9 +204,9 @@ void load_16bit_executer(multiboot_info_t* mbi){
     uint32_t j = 0;
     uint32_t i = 0;
     /* Copy .header to 0x1000 */
-    uint8_t* src = (uint8_t*)mod.mod_start;
+    uint8_t* src = (uint8_t*)mod->mod_start;
     uint8_t* dst = (uint8_t*)0x1000;
-    for(i = 0; i < mod.mod_end - mod.mod_start && i<MAX_MOD_SIZE; i++){
+    for(i = 0; i < mod->mod_end - mod->mod_start && i<MAX_MOD_SIZE; i++){
         dst[i] = src[i];
     }
     // for (i = 0; i < sizeof(*header); i++) {

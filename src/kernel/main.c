@@ -28,7 +28,7 @@
 
 #include <stdio.h>
 
-// multiboot_info_t *_mbi;
+multiboot_info_t *_mbi;
 
 static void init_graphics(){
     int32_t res,res2, res3;
@@ -75,33 +75,35 @@ static void init_graphics(){
 }
 
 static void init_drivers(){
+    printf(" init drivers ");
     timer_drv.init();
     keyboard_drv.init();    
-    init_graphics();
-    while(1);
+    // init_graphics();
+    // while(1);
 }
 
 // Kernel initialization
 static void kernel_init(multiboot_info_t* _mbi) {
     _mbi = _mbi;
     _hide_cursor();
-    stdio_init();
-    init_gdt();
-    init_paging(_mbi);
+    // stdio_init();
+    // init_gdt();
+    init_paging_stage2(_mbi);
     // Initialize IDT (sets up exceptions and IRQs)
     idt_init();
     enable_fpu();
     load_multiboot_mods(_mbi);
     init_drivers();
     init_processes();
-
-
+    
+    
     mouse_drv.init(80,25);
     mouse_drv.set_speed(20); // Faster movement
     mouse_drv.set_resolution(1); // 2 counts/mm
     mouse_drv.set_sample_rate(100); // 100 Hz    
     mouse_drv.disable_mouse();
     mouse_drv.enable_mouse();
+    while(1);
 
 
     vga_clear();

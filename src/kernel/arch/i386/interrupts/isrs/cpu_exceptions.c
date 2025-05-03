@@ -74,15 +74,17 @@ void isr_page_fault(uint32_t error_code) {
     asm volatile("mov %%cr2, %0" : "=r" (fault_addr));
 
     if (!(error_code & 0x1)) { // Page not present
-        uint32_t* current_pd = get_current_page_directory();
-        int result = assign_page_table(current_pd, (void*)(fault_addr & ~0x3FFFFF), 
-                                      (error_code & 0x4) ? PAGE_USER : 0);
-        if (result == 0) {
-            return; // Successfully assigned a page table, resume execution
-        }
-        printf("Page Fault: No free page tables for %08X err: %d \n", fault_addr, result);
+        printf("Page Fault: %08x |Page not present at %08x\n", error_code, fault_addr);
+
+        // uint32_t* current_pd = get_current_page_directory();
+        // int result = assign_page_table(current_pd, (void*)(fault_addr & ~0x3FFFFF), 
+        //                               (error_code & 0x4) ? PAGE_USER : 0);
+        // if (result == 0) {
+        //     return; // Successfully assigned a page table, resume execution
+        // }
+        // printf("Page Fault: No free page tables for %08X err: %d \n", fault_addr, result);
     } else {
-        printf("Page Fault: Protection violation at %08X\n", fault_addr);
+        printf("Page Fault: %08x |Protection violation at %08x\n", error_code, fault_addr);
     }
 
     printf("Error code: %08X\n", error_code);

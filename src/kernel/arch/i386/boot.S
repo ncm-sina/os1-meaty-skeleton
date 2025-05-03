@@ -6,15 +6,11 @@
 .set MAGIC,    0x1BADB002       /* Multiboot magic number */
 .set CHECKSUM, -(MAGIC + FLAGS) /* Checksum for validation */
 
-# Kernel virtual base address
-.set KERNEL_VIRT_BASE, 0xC0000000
-.set KERNEL_PAGE_DIR,  (page_directory - KERNEL_VIRT_BASE)
-.set MAX_PROCESSES, 256
 
 /* Multiboot header for GRUB */
 .section .multiboot
 .global multiboot_header
-.align 4
+.align 16
 multiboot_header:
     .long MAGIC
     .long FLAGS
@@ -30,14 +26,35 @@ multiboot_header:
     .long 0  /* height 768*/
     .long 0  /* depth 32*/
 
+# Kernel virtual base address
+.set KERNEL_VIRT_BASE, 0xC0000000
+.set PAGE_SIZE, 4096
+.set PAGE_TABLE_SIZE, 1024
+.set PAGETABLES_MAXSIZE, 1280
+.set KERNEL_PAGEDIR,  (page_directory - KERNEL_VIRT_BASE)
+.set MAX_PROCESSES, 256
+.set GDT_PHYS_ADDR, 0x8000
+.set GDT_DESCRIPTOR_PHYS_ADDR, 0x80F0
+
+.set KCODE32_SEG, 0x08     # 32-bit code segment
+.set KDATA32_SEG, 0x10     # 32-bit data segment
+.set UCODE32_SEG, 0x18     # 16-bit code segment
+.set UDATA32_SEG, 0x20     # 16-bit data segment
+.set CODE16_SEG, 0x28     # 16-bit code segment
+.set DATA16_SEG, 0x30     # 16-bit data segment
+
+
 /* Kernel entry point */
 .section .text
 .global _start
 _start:
 	movl %ebx, multiboot_info - KERNEL_VIRT_BASE
 
+    # temporary stack
+    movl $0x9000, %esp
+    
     /* Set up page table: map physical 0x0 - 0x400000 */
-    movl $pagetable - KERNEL_VIRT_BASE, %edi
+    movl $pagetables - KERNEL_VIRT_BASE, %edi
     movl $0, %eax
     movl $1024, %ecx
 1:  orl  $3, %eax
@@ -47,118 +64,57 @@ _start:
     loop 1b
 
     /* Set up page directory */
-    movl $pagedir - KERNEL_VIRT_BASE, %edi
-    movl $pagetable - KERNEL_VIRT_BASE, %eax
+    movl $kernel_pagedir - KERNEL_VIRT_BASE, %edi
+    movl $pagetables - KERNEL_VIRT_BASE, %eax
     orl  $3, %eax
     movl %eax, (%edi)           /* PDE 0: 0x0 - 0x400000 */
     movl %eax, 768*4(%edi)      /* PDE 768: 0xC0000000 - 0xC0400000 */
 
     /* Enable paging */
-    movl $pagedir - KERNEL_VIRT_BASE, %eax
+    movl $kernel_pagedir - KERNEL_VIRT_BASE, %eax
     movl %eax, %cr3
     movl %cr0, %eax
     orl  $0x80000000, %eax
     movl %eax, %cr0
 
+    pushl multiboot_info
+    call init_paging_stage1
+
+    call init_gdt
+
     /* Far jump to higher half */
 	mov $higher_half, %eax
     jmp *%eax
-
 higher_half:
 
-    lgdt gdt_descriptor
-    ljmp $0x8, $2f
+    ljmp $KCODE32_SEG, $2f
 2:
 
     movl $stack_top, %esp
     pushl multiboot_info
     call kernel_main
-    call blue_death_screen /* this should never be called. unless something goes wrong */
     cli
 1:  hlt
     jmp  1b
 .size _start, . - _start
 
-/* Blue Death Screen: Sets blue background, prints message, restarts */
-blue_death_screen:
-    /* Clear screen with blue background (VGA text mode at 0xC00B8000) */
-    /* movl $0xC00B8000, %edi        VGA buffer virtual address - also works */
-    movl $0xB8000, %edi       /* VGA buffer virtual address */
-    movl $2000, %ecx             /* 80x25 = 2000 characters */
-    movw $0x1720, %ax            /* Blue background (0x17), space char (0x20) */
-    rep  stosw                   /* Fill screen (2 bytes per char: attr + char) */
-
-    /* Print "KERNEL PANIC" at top-left */
-    ; movl $0xC00B8000, %edi       /* Reset EDI to VGA start - also works */
-    movl $0xB8000, %edi       /* Reset EDI to VGA start */
-    add $1610, %edi       /* Reset EDI to VGA start */
-    movl $panic_msg, %esi        /* Source string address */
-    movb $0x1F, %ah              /* Blue bg, white fg */
-    movl $68, %ecx               /* Length of "KERNEL PANIC" */
-print_loop:
-    lodsb                        /* Load next char from panic_msg into AL */
-    stosw                        /* Write char (AL) + attribute (AH) to VGA */
-    loop print_loop              /* Repeat for ECX times */
-
-    /* Rough 2-second delay (no timer, just CPU cycles) */
-    movl $0x8000000, %ecx        /* Arbitrary large number for delay */
-delay_loop:
-
-    loop delay_loop              /* Decrement ECX, loop until 0 */
-
-    /* Restart via keyboard controller */
-    movb $0xFE, %al              /* Pulse reset line */
-    outb %al, $0x64              /* Write to port 0x64 */
-    jmp  .                       /* Shouldn’t reach here (infinite loop) */
-    ret                          /* Fallback (unreachable) */
-
 
 /* Initialized data */
 .section .data
 .align 16
-/* GDT */
-gdt_start:
-    .long 0x00000000
-    .long 0x00000000
-    .word 0xFFFF
-    .word 0x0000
-    .byte 0x00
-    .byte 0x9A
-    .byte 0xCF
-    .byte 0x00
-    .word 0xFFFF
-    .word 0x0000
-    .byte 0x00
-    .byte 0x92
-    .byte 0xCF
-    .byte 0x00
-gdt_end:
-.align 16
-gdt_descriptor:
-    .word gdt_end - gdt_start - 1
-    .long gdt_start 
-
 .global multiboot_info
 multiboot_info: .long 0
-panic_msg: .ascii "KERNEL PANIC"
-.global pagetables_phys_start
-pagetables_phys_start: .long 0
-.global pagetables_virt_start
-pagetables_virt_start: .long 0xFFC00000
 /* BSS */
 .section .bss
+.align 16
+.global last_pagetable_idx
+last_pagetable_idx: .long 0
 .align 4096
-.global pagedir
-pagedir: .skip 4096
-.global pagetable
-pagetable: .skip 4096
+.global kernel_pagedir
+kernel_pagedir: .skip 4096
+.global pagetables
+pagetables: .skip 4096 * PAGETABLES_MAXSIZE
 .global pagedirs
 pagedirs: .skip 4096 * MAX_PROCESSES
-.global pagetables_pagetable
-pagetables_pagetable: .skip 4096
-.global tmppage
-tmppage: .skip 4096
-.global templatePage
-templatePage: .skip 4096
 stack_bottom: .skip 16384
 stack_top:

@@ -19,6 +19,7 @@
 #define PAGE_WRITE    (1 << 1)
 #define PAGE_USER     (1 << 2)
 
+
 extern uint32_t pagedir[1024];
 extern uint32_t pagetable[1024];
 extern uint32_t pagetables_pagetable[1024];

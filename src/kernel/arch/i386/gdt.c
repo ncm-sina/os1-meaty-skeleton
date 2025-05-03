@@ -1,8 +1,14 @@
 #include <kernel/arch/i386/gdt.h>
 
-// Static GDT array and pointer
-static GdtEntry gdt[GDT_ENTRIES];
-static GdtPtr gdt_ptr;
+#define GDT_PHYS_ADDR 0x90000
+#define GDT_DESC_PHYS_ADDR 0x900F0
+#define GDT_NUM_ENTRIES 7
+
+
+// Define GDT at fixed location
+gdt_entry_t* gdt = (gdt_entry_t*) GDT_PHYS_ADDR;
+gdt_descriptor_t* gdt_desc = (gdt_descriptor_t*) GDT_DESC_PHYS_ADDR;
+
 
 // Set a single GDT entry
 static inline gdt_set_gate(int num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran) {
@@ -40,10 +46,20 @@ void init_gdt(void) {
     // Access: 0xF2 = Present (1) | Ring 3 (11) | Code/Data (1) | Executable (0) | Writable (1)
     // Granularity: 0xCF = 4KB pages (1) | 32-bit (1) | Limit 4GB
 
+    // 16-bit code segment (ring 0): selector 0x28
+    gdt_set_gate(5, 0, 0xFFFF, 0x9A, 0x0F);
+    // Access: 0x9A = Present (1) | Ring 0 (00) | Code/Data (1) | Executable (1) | Readable (0)
+    // Granularity: 0x0F = Byte granularity (0) | 16-bit (0) | Limit 64KB
+
+    // 16-bit data segment (ring 0): selector 0x30
+    gdt_set_gate(6, 0, 0xFFFF, 0x92, 0x0F);
+    // Access: 0x92 = Present (1) | Ring 0 (00) | Code/Data (1) | Executable (0) | Writable (1)
+    // Granularity: 0x0F = Byte granularity (0) | 16-bit (0) | Limit 64KB
+    
     // Load the GDT
-    gdt_ptr.limit = sizeof(gdt) - 1; // Size of GDT in bytes - 1
-    gdt_ptr.base = (uint32_t)&gdt;   // Physical address of GDT
-    asm volatile("lgdt %0" : : "m" (gdt_ptr));
+    gdt_desc->limit = (GDT_NUM_ENTRIES * sizeof(gdt_entry_t)) - 1; // Size of GDT in bytes - 1
+    gdt_desc->base = (uint32_t)GDT_PHYS_ADDR;   // Physical address of GDT
+    asm volatile("lgdt %0" : : "m" (*gdt_desc));
 
     // Reload segment registers for kernel mode
     asm volatile(

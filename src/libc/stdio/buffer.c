@@ -35,7 +35,7 @@ static void itoa(int num, char *buf) {
 }
 
 // Helper function to convert an integer to a hexadecimal string
-static void itohex(unsigned int num, char *buf, int uppercase, int width, bool use_prefix) {
+static void itohex(uint64_t num, char *buf, int uppercase, int width, bool use_prefix) {
     const char *digits = uppercase ? "0123456789ABCDEF" : "0123456789abcdef";
     char temp[17]; // Max 16 digits for 64-bit hex + null
     int i = 0;
@@ -57,7 +57,7 @@ static void itohex(unsigned int num, char *buf, int uppercase, int width, bool u
 
     // int prefix_len = use_prefix ? 2 : 0; // "0x" or "0X" if prefix is used
     int hex_len = i; // Number of actual hex digits
-    int total_len = hex_len > width ? hex_len : width; // Total length including padding
+    int total_len = width;//hex_len > width ? width : hex_len; // Total length including padding
 
     if (use_prefix) {
         buf[start++] = '0';
@@ -73,6 +73,49 @@ static void itohex(unsigned int num, char *buf, int uppercase, int width, bool u
     }
     buf[start + total_len] = '\0';
 }
+
+// // Helper function to convert an integer to a hexadecimal string
+// static void itohex2(uint8_t* numm, char *buf, int uppercase, int width, bool use_prefix) {
+//     int max_width = 16;
+//     if(width>max_width)
+//         width = max_width;
+
+//     const char *digits = uppercase ? "0123456789ABCDEF" : "0123456789abcdef";
+//     char temp[17]; // Max 16 digits for 64-bit hex + null
+//     int i = 0;
+//     int start = 0;
+
+//     while(i<width){
+//         uint8_t num = * (numm + i/2);
+//         if (num == 0) {
+//             temp[i++] = '0';
+//             temp[i++] = '0';
+//         } else {
+//             temp[i++] = digits[num / 16];
+//             temp[i++] = digits[num % 16];
+//         }    
+//     }
+
+
+//     // int prefix_len = use_prefix ? 2 : 0; // "0x" or "0X" if prefix is used
+//     int hex_len = i; // Number of actual hex digits
+//     int total_len = hex_len > width ? width : hex_len; // Total length including padding
+
+//     if (use_prefix) {
+//         buf[start++] = '0';
+//         buf[start++] = uppercase ? 'X' : 'x';
+//     }
+
+//     for (int j = 0; j < total_len; j++) {
+//         if (j < total_len - hex_len) {
+//             buf[start + j] = '0'; // Leading zeros
+//         } else {
+//             buf[start + j] = temp[hex_len - (j - (total_len - hex_len)) - 1]; // Hex digits
+//         }
+//     }
+//     buf[start + total_len] = '\0';
+// }
+
 
 // Helper function to convert a double to a string with specified width and precision
 static void dtoaf(double num, char *buf, int width, int precision) {
@@ -212,7 +255,7 @@ void format_string(char *output, const char *fstring, va_list args) {
                     break;
                 }
                 case 'x': {
-                    unsigned int num = va_arg(args, unsigned int);
+                    void* num = va_arg(args, uint32_t);
                     char hex_buf[20];
                     itohex(num, hex_buf, 0, width, use_prefix);
                     char *p = hex_buf;
@@ -220,7 +263,7 @@ void format_string(char *output, const char *fstring, va_list args) {
                     break;
                 }
                 case 'X': {
-                    unsigned int num = va_arg(args, unsigned int);
+                    uint64_t num = va_arg(args, uint64_t);
                     char hex_buf[20];
                     itohex(num, hex_buf, 1, width, use_prefix);
                     char *p = hex_buf;

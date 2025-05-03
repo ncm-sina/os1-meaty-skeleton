@@ -1,34 +1,32 @@
 ENTRY(_start)                /* Entry point symbol for the kernel */
 
 SECTIONS {
-    /* Place the kernel at 3GB (0xC0000000) in virtual memory */
-    . = 0xC0100000;         /* Kernel base address (1MB above 3GB for bootloader compatibility) */
-    _kernel_start_virt = .;  /* Physical address of kernel start */
+    . = 0xC0100000;            /* Start at 1MB (physical and virtual) */
+    _kernel_start_virt = .;  /* Virtual address of kernel start */
     _kernel_start_phys = . - 0xC0000000;  /* Physical address of kernel start */
 
-    /* Multiboot header and initial code */
+
     .text ALIGN(4K) : AT(ADDR(.text) - 0xC0000000) {
-        *(.multiboot)       /* Multiboot header section (if using a multiboot bootloader) */
+        *(.multiboot)          /* Multiboot header */
         *(.text)            /* All executable code */
     }
 
-    /* Read-only data */
     .rodata ALIGN(4K) : AT(ADDR(.rodata) - 0xC0000000) {
-        *(.rodata*)         /* Read-only data (constants, strings, etc.) */
+        *(.rodata*)         /* Read-only data */
     }
 
-    /* Read-write data */
     .data ALIGN(4K) : AT(ADDR(.data) - 0xC0000000) {
         *(.data)            /* Initialized data */
     }
 
-    /* Uninitialized data (BSS) */
     .bss ALIGN(4K) : AT(ADDR(.bss) - 0xC0000000) {
         *(COMMON)           /* Uninitialized global variables */
         *(.bss)             /* Zero-initialized data */
     }
 
-    /* Define some symbols for the kernel */
+
+    /* Define kernel end symbols */
     _kernel_end_virt = .;               /* Virtual address of kernel end */
     _kernel_end_phys = . - 0xC0000000;  /* Physical address of kernel end */
+
 }
