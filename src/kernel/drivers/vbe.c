@@ -16,7 +16,7 @@
 #define VBE_MODE_LIST 0x9400
 // #endif
 
-#define VBE_USE_BGR 0
+#define VBE_USE_BGR 1
 
 #define _AX 0x6000
 #define _BX 0x6002
@@ -42,8 +42,9 @@ extern uint32_t *_vbe_bc_data_end;
 // Global pointers
 vbe_info_block_t* vbe_info = (vbe_info_block_t*) VBE_INFO;
 vbe_mode_info_t* mode_info = (vbe_mode_info_t*) VBE_MINFO;
-uint32_t* framebuffer = (uint32_t*) FRAMEBUFFER_VADDR;
+// uint32_t* framebuffer = (uint32_t*) FRAMEBUFFER_VADDR;
 uint64_t framebuffer_addr; // framebuffer physical address or dynamic vaddr (we should map this to a fixed address later)
+
 
 // External page table mapping function (you must implement)
 // extern void map_page(uint32_t phys_addr, uint32_t virt_addr, uint32_t flags);
@@ -153,7 +154,7 @@ int32_t vbe_init(void) {
 
     if (!(_mbi->flags & (1 << 12))) return -5;
     framebuffer_addr = _mbi->framebuffer_addr; // Physical address
-    framebuffer = (uint32_t *) framebuffer_addr;
+    // framebuffer = (uint32_t *) framebuffer_addr;
     // return res;
     return 0;
 }
@@ -566,33 +567,30 @@ int vbe_list_supported_modes(void) {
     return 0;
 }
 
-int vbe_clear_screen(uint32_t color, vbe_mode_info_t *mode_info) {
-    uint32_t fb_addr;
-    uint32_t width, height, pitch;
-    uint8_t bpp;
+int vbe_clear_screen(uint32_t color/*, vbe_mode_info_t *mode_info*/) {
 
     // Step 1: Get framebuffer info from _mbi or mode_info
     if (_mbi->flags & (1 << 12)) {
-        fb_addr = (uint32_t) _mbi->framebuffer_addr;
-        width = _mbi->framebuffer_width;
-        height = _mbi->framebuffer_height;
-        pitch = _mbi->framebuffer_pitch;
-        bpp = _mbi->framebuffer_bpp; 
+        framebuffer.fb_addr = (uint32_t) _mbi->framebuffer_addr;
+        framebuffer.width = _mbi->framebuffer_width;
+        framebuffer.height = _mbi->framebuffer_height;
+        framebuffer.pitch = _mbi->framebuffer_pitch;
+        framebuffer.bpp = _mbi->framebuffer_bpp; 
 
         // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
         // print_multiboot_info(_mbi);
-        // printf("fb_addr: %08x width: %d height: %d pitch: %d bpp: %d ", fb_addr, width, height, pitch, bpp);
+        // printf("fb_addr: %08x width: %d height: %d pitch: %d bpp: %d ", framebuffer.fb_addr, framebuffer.width, framebuffer.height, framebuffer.pitch, framebuffer.bpp);
         // while(1);
-    } else if (mode_info != NULL) {
-        fb_addr = mode_info->framebuffer;
-        width = mode_info->width;
-        height = mode_info->height;
-        pitch = mode_info->pitch;
-        bpp = mode_info->bpp;
+    }/* else if (mode_info != NULL) {
+        framebuffer.fb_addr = mode_info->framebuffer;
+        framebuffer.width = mode_info->width;
+        framebuffer.height = mode_info->height;
+        framebuffer.pitch = mode_info->pitch;
+        framebuffer.bpp = mode_info->bpp;
         // printf("fb_addr: %08x width: %d height: %d pitch: %d bpp: %d ", fb_addr, width, height, pitch, bpp);
     // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
     //     printf(" 222 ");
-    } else {
+    }*/ else {
         if(vbe_set_text_mode()) printf("5error setting text mode err\n");
         printf("No framebuffer info available\n");
         return -1;
@@ -613,23 +611,23 @@ int vbe_clear_screen(uint32_t color, vbe_mode_info_t *mode_info) {
     // printf("pitch: %u", pitch);
     // while(1);
     // Step 3: Clear the screen
-    uint8_t *fb = (uint8_t *)(uintptr_t)fb_addr;
+    uint8_t *fb = (uint8_t *)(uintptr_t)framebuffer.fb_addr;
     uint32_t row, col;
     // bpp=24;
-    if (bpp == 32) {
+    if (framebuffer.bpp == 32) {
         uint32_t *fb32 = (uint32_t *)fb;
-        for (row = 0; row < height; row++) {
-            for (col = 0; col < width; col++) {
-                fb32[row * (pitch / 4) + col] = color;
+        for (row = 0; row < framebuffer.height; row++) {
+            for (col = 0; col < framebuffer.width; col++) {
+                fb32[row * (framebuffer.pitch / 4) + col] = color;
             }
         }
-    }else if (bpp == 24) {
+    }else if (framebuffer.bpp == 24) {
         uint8_t r = (color >> 16) & 0xFF;
         uint8_t g = (color >> 8) & 0xFF;
         uint8_t b = color & 0xFF;
-        for (row = 0; row < height; row++) {
-            uint8_t *row_ptr = fb + row * pitch;
-            for (col = 0; col < width; col++) {
+        for (row = 0; row < framebuffer.height; row++) {
+            uint8_t *row_ptr = fb + row * framebuffer.pitch;
+            for (col = 0; col < framebuffer.width; col++) {
 #if VBE_USE_BGR
                 row_ptr[col * 3 + 0] = b; // Blue
                 row_ptr[col * 3 + 1] = g; // Green
@@ -644,13 +642,13 @@ int vbe_clear_screen(uint32_t color, vbe_mode_info_t *mode_info) {
     } else { // bpp == 16
         uint16_t *fb16 = (uint16_t *)fb;
         uint16_t color16 = (uint16_t)color; // Truncate to 16-bit
-        for (row = 0; row < height; row++) {
-            for (col = 0; col < width; col++) {
-                fb16[row * (pitch / 2) + col] = color16;
+        for (row = 0; row < framebuffer.height; row++) {
+            for (col = 0; col < framebuffer.width; col++) {
+                fb16[row * (framebuffer.pitch / 2) + col] = color16;
             }
         }
     }
-while(1);
+    // while(1);
     return 0;
 }
 
@@ -676,18 +674,48 @@ int vbe_is_text_mode(void) {
 
 // Draw a pixel
 void vbe_draw_pixel(uint16_t x, uint16_t y, uint32_t color) {
-    if (x < mode_info->width && y < mode_info->height) {
-        uint32_t offset = y * (mode_info->pitch / 4) + x;
-        framebuffer[offset] = color;
+    if(x >= framebuffer.width || x < 0 || y>=framebuffer.height || y<0){
+        while(1);
+        return;
     }
+    uint8_t *fb = (uint8_t *)(uintptr_t)framebuffer.fb_addr;
+    if(framebuffer.bpp == 32){
+        uint32_t *fb32 = (uint32_t *)fb;
+        fb32[y * (framebuffer.pitch / 4) + x] = color;
+        if (x < framebuffer.width && y < framebuffer.height) {
+            uint32_t offset = y * (framebuffer.pitch / 4) + x;
+            fb32[y * (framebuffer.pitch / 4) + x] = color;
+        }
+    }else if(framebuffer.bpp == 24){
+        uint8_t r = (color >> 16) & 0xFF;
+        uint8_t g = (color >> 8) & 0xFF;
+        uint8_t b = color & 0xFF;
+        uint8_t *row_ptr = fb + y * framebuffer.pitch;
+#if VBE_USE_BGR
+        row_ptr[x * 3 + 0] = b; // Blue
+        row_ptr[x * 3 + 1] = g; // Green
+        row_ptr[x * 3 + 2] = r; // Red
+#else
+        row_ptr[x * 3 + 0] = r; // Red
+        row_ptr[x * 3 + 1] = g; // Green
+        row_ptr[x * 3 + 2] = b; // Blue
+#endif
+
+    }
+// if (x < framebuffer.width && y < framebuffer.height) {
+//     uint32_t offset = y * (framebuffer.pitch / 4) + x;
+//     framebuffer.fb_addr[offset] = color;
+// }
 }
 
 // Fill a rectangle
 void vbe_fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t color) {
-    for (uint16_t j = y; j < y + height && j < mode_info->height; j++) {
-        for (uint16_t i = x; i < x + width && i < mode_info->width; i++) {
-            uint32_t offset = j * (mode_info->pitch / 4) + i;
-            framebuffer[offset] = color;
+    uint8_t *fb = (uint8_t *)(uintptr_t)framebuffer.fb_addr;
+
+    for (uint16_t j = y; j < y + height && j < height; j++) {
+        for (uint16_t i = x; i < x + width && i < width; i++) {
+            uint32_t offset = j * (framebuffer.pitch / 4) + i;
+            fb[offset] = color;
         }
     }
 }

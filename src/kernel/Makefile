@@ -45,6 +45,7 @@ mm/vmm.o \
 mm/syscalls.o \
 process/syscalls.o \
 misc/syscalls.o \
+utils/bmp.o \
 basic_tests.o \
 syscall.o \
 

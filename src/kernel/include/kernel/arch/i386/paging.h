@@ -87,6 +87,7 @@ typedef struct {
     uint8_t pagetable_bitmap[PAGETABLE_BITMAP_SIZE];
     uint8_t pagedir_bitmap[PAGEDIR_BITMAP_SIZE];
     int32_t total_pages;
+    uint32_t max_addr;
     int32_t total_pagetables;
     uint32_t mapped_phys_page_bitmap[M_PHYS_P_BITMAP_MAX_SIZE];
     uint32_t mapped_phys_page_bitmap_size;

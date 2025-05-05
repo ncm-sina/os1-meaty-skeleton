@@ -25,13 +25,15 @@
 #include <kernel/drivers/vbe.h>
 #include <kernel/drivers/all.h>
 
+#include <kernel/utils/bmp.h>
+
 #include <kernel/kernel-base.h>
 
 #include <stdio.h>
 
 multiboot_info_t *_mbi;
 
-extern uint32_t* framebuffer;
+// extern uint32_t* framebuffer;
 extern uint64_t framebuffer_addr; // framebuffer physical address or dynamic vaddr (we should map this to a fixed address later)
 
 
@@ -94,17 +96,17 @@ static void init_graphics(){
     // vbe_list_supported_modes();
     // while(1);
     
-    vbe_clear_screen(0xFFCCEE, &tmp_vbe_minfo);
-    while(1);
-    if(res<0){
-        if((res2 = vbe_set_text_mode()) < 0) printf("7error setting text mode err:%08x \n",res2);
-        printf(" no ");
-    }else{       
-        // vbe_set_mode(1024,768,32);
-        if((res2 = vbe_set_text_mode()) < 0) printf("8error setting text mode err:%08x \n",res2);
-        printf(" yes ");
-    }
-    while(1);
+    vbe_clear_screen(0x2233cc/*, &tmp_vbe_minfo*/);
+    // while(1);
+    // if(res<0){
+    //     if((res2 = vbe_set_text_mode()) < 0) printf("7error setting text mode err:%08x \n",res2);
+    //     printf(" no ");
+    // }else{
+    //     // vbe_set_mode(1024,768,32);
+    //     if((res2 = vbe_set_text_mode()) < 0) printf("8error setting text mode err:%08x \n",res2);
+    //     printf(" yes ");
+    // }
+    // while(1);
 
 }
 
@@ -113,9 +115,43 @@ static void init_drivers(){
     timer_drv.init();
     keyboard_drv.init();    
     init_graphics();
-    while(1);
 }
 
+// Example usage in your kernel
+void display_image(const uint8_t *bmp_buffer, uint32_t buffer_size) {
+    Pixel32 *pixel_buffer = (Pixel32 *)0xD0000000; // Example address for output buffer
+    uint32_t width, height;
+
+    int result = read_bmp(bmp_buffer, buffer_size, pixel_buffer, &width, &height);
+    if (result != 0) {
+        if(vbe_set_text_mode()) printf("5error setting text mode err\n");
+        printf("res:%d ", result);
+        while(1);    
+        // Handle error (e.g., print to serial console)
+        return;
+    }
+
+    // Draw pixels using your vbe_draw_pixel function
+    for (uint32_t y = 0; y < height; y++) {
+        for (uint32_t x = 0; x < width; x++) {
+            Pixel32 pixel = pixel_buffer[y * width + x];
+            uint32_t color = (pixel.red << 16) | (pixel.green << 8) | pixel.blue;
+            vbe_draw_pixel(x, y, color); // Assuming vbe_draw_pixel takes RGB
+        }
+    }
+}
+
+static void draw_background(multiboot_info_t* mbi){
+    multiboot_module_t *mod = 0;
+    mod = get_multiboot_mod_by_name(mbi, "the-skeleton.bmp");
+    if (mod->mod_start >= mod->mod_end) {
+        printf("Invalid module\n");
+        return;
+    }
+    
+    display_image( mod->mod_start, mod->mod_end - mod->mod_start );
+    
+}
 
 // Kernel initialization
 static void kernel_init(multiboot_info_t* mbi) {
@@ -131,6 +167,14 @@ static void kernel_init(multiboot_info_t* mbi) {
     init_drivers();
     init_processes();
 
+    // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
+    vbe_draw_pixel(10,10,0xFF0000);
+    draw_background(mbi);
+    // vbe_clear_screen(0xFFFF00/*, &tmp_vbe_minfo*/);
+    // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
+    // print_multiboot_info(_mbi);
+    // printf("fb_addr: %08x width: %d height: %d pitch: %d bpp: %d ", framebuffer.fb_addr, framebuffer.width, framebuffer.height, framebuffer.pitch, framebuffer.bpp);
+    while(1);
     
     
     mouse_drv.init(1024,768);

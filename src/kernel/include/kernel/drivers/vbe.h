@@ -70,7 +70,7 @@ int vbe_list_supported_modes(void);
 int32_t vbe_init(void);
 uint32_t vbe_set_mode(uint16_t width, uint16_t height, uint8_t bpp);
 uint32_t vbe_get_mode_info(uint16_t mode, vbe_mode_info_t * info);
-int vbe_clear_screen(uint32_t color, vbe_mode_info_t *mode_info);
+int vbe_clear_screen(uint32_t color/*, vbe_mode_info_t *mode_info*/);
 int vbe_set_text_mode(void);
 int vbe_is_text_mode(void);
 
@@ -83,5 +83,13 @@ int vbe_is_text_mode(void);
 
 // // Fill a rectangle at (x, y) with width and height
 // void vbe_fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t color);
+
+typedef struct{
+    uint32_t fb_addr;
+    uint32_t width, height, pitch;
+    uint8_t bpp;    
+} framebuffer_t;
+framebuffer_t framebuffer;
+
 
 #endif
