@@ -251,7 +251,6 @@ static inline void mark_initial_used_physical_pages (multiboot_info_t* mbi){
     }
 
     printf(" mapped_phys_page_bitmap: %08x ", paging_state.mapped_phys_page_bitmap);
-    
 }
 
 
@@ -275,7 +274,7 @@ void init_paging_stage1(multiboot_info_t* mbi) {
     page_directory_t* kernel_pagedir_phys_addr = (page_directory_t*)( ((uint32_t)&kernel_pagedir) - KERNEL_VBASE);
     page_table_t* pagetables_phys_addr = (page_table_t*)( ((uint32_t)pagetables) - KERNEL_VBASE);
     uint32_t flags;
-
+    uint32_t i;
     uint32_t reserved_mem_end_phys_addr = ((uint32_t)&_kernel_end_phys);
 
     // we mark all memory from start to end of last multiboot module as used and we make sure they are mapped and identity mapped
@@ -290,7 +289,7 @@ void init_paging_stage1(multiboot_info_t* mbi) {
     // printf("reserved end page: %08x ", reserved_mem_end_page);    
 
     flags =  PAGE_PRESENT | PAGE_WRITE;
-    for(uint32_t i = 0; i < reserved_mem_end_page; i++){
+    for(i = 0; i < reserved_mem_end_page; i++){
         // printf("imod: %08x %08x %08x ", i%PAGE_TABLE_SIZE, i, reserved_mem_end_page);
         // mappage_phys_to_virt(&kernel_pagedir, i, i, PAGE_PRESENT | PAGE_WRITE, 1);
         pagetables_phys_addr[i/PAGE_TABLE_SIZE].entries[i%PAGE_TABLE_SIZE] = (i * PAGE_SIZE) | flags;
@@ -299,11 +298,13 @@ void init_paging_stage1(multiboot_info_t* mbi) {
     uint32_t kernel_end_pde = (reserved_mem_end_page + PAGE_TABLE_SIZE - 1)/PAGE_TABLE_SIZE;
     // printf("kpdpa: %08x ptpa: %08x kep: %08x kpde_c: %08x \n", kernel_pagedir_phys_addr, pagetables_phys_addr, reserved_mem_end_page, kernel_end_pde);
     flags =  PAGE_PRESENT | PAGE_WRITE;
-    for(uint32_t i = 0; i < kernel_end_pde ; i++){
+    for(i = 0; i < kernel_end_pde ; i++){
         // printf("setting pde: %08x before: %08x val: %08x %08x \n", i, kernel_pagedir_phys_addr->entries[i], (uint32_t)&pagetables_phys_addr[i], ((uint32_t)&pagetables_phys_addr[i]) | PAGE_PRESENT | PAGE_WRITE);
         kernel_pagedir_phys_addr->entries[i] = ((uint32_t)&pagetables_phys_addr[i]) | flags; // map phys addresses to +0xC0000000 virt addr
         kernel_pagedir_phys_addr->entries[i+768] = ((uint32_t)&pagetables_phys_addr[i]) | flags; // map phys addresses to +0xC0000000 virt addr
     }
+
+    last_pagetable_idx = i;
 
 
     // mapping high high map area (usually out of actual ram used by vbe etc)
@@ -313,7 +314,7 @@ void init_paging_stage1(multiboot_info_t* mbi) {
     flags = PAGE_PRESENT | PAGE_WRITE;
     for (uint32_t i= high_mem_start_page; i<high_mem_end_page; i++){
         // printf(" mapping2: %08x %08x %08x %08x", i,i*PAGE_SIZE| flags, high_mem_start_page, high_mem_end_page);
-        pagetables_phys_addr[i/PAGE_TABLE_SIZE].entries[i%PAGE_TABLE_SIZE] = (i * PAGE_SIZE) | flags;
+        pagetables_phys_addr[last_pagetable_idx + (i-high_mem_start_page)/PAGE_TABLE_SIZE].entries[i%PAGE_TABLE_SIZE] = (i * PAGE_SIZE) | flags;
         // map_phys_to_virt(&kernel_pagedir, i*PAGE_SIZE, i*PAGE_SIZE, flags, 1);
     }
 
@@ -321,22 +322,60 @@ void init_paging_stage1(multiboot_info_t* mbi) {
     uint32_t high_mem_start_pde = 0xe0000000 / (PAGE_SIZE*PAGE_TABLE_SIZE);
     uint32_t high_mem_end_pde = 0xffffffff / (PAGE_SIZE*PAGE_TABLE_SIZE);
     flags = PAGE_PRESENT | PAGE_WRITE;
-    for(uint32_t i = high_mem_start_pde; i < high_mem_end_pde ; i++){
+    for(i = high_mem_start_pde; i <= high_mem_end_pde ; i++){
         // printf(" mapping3: %08x %08x %08x %08x ", i, (uint32_t)&pagetables_phys_addr[i], high_mem_start_pde, high_mem_end_pde);
-        kernel_pagedir_phys_addr->entries[i] = ((uint32_t)&pagetables_phys_addr[i]) | flags; // map phys addresses to +0xC0000000 virt addr
+        kernel_pagedir_phys_addr->entries[i] = ((uint32_t)&pagetables_phys_addr[last_pagetable_idx++]) | flags; // map phys addresses to +0xC0000000 virt addr
     }
 
-    for(uint32_t i=0; i< reserved_mem_end_page ; i++){
+    for(i=0; i< reserved_mem_end_page ; i++){
         paging_state.mapped_phys_page_bitmap[i/32] |= (1 << (i % 32));
     }
 
+
+    // now we try to map addresses here and there that are out of memory range to themselves
+
     // printf(" mapped_phys_page_bitmap:%08x ", &paging_state.mapped_phys_page_bitmap);
+    uint32_t tmp_start_page, tmp_end_page;
+    tmp_start_page = 0x09000000 / PAGE_SIZE;
+    tmp_end_page = 0x09001000 / PAGE_SIZE;
+    for (uint32_t i= tmp_start_page; i<tmp_end_page; i++){
+        // printf(" mapping2: %08x %08x %08x %08x", i,i*PAGE_SIZE| flags, high_mem_start_page, high_mem_end_page);
+        pagetables_phys_addr[last_pagetable_idx + (i-tmp_start_page)/PAGE_TABLE_SIZE].entries[i%PAGE_TABLE_SIZE] = (i * PAGE_SIZE) | flags;
+        // map_phys_to_virt(&kernel_pagedir, i*PAGE_SIZE, i*PAGE_SIZE, flags, 1);
+    }
+    tmp_start_page /= PAGE_TABLE_SIZE;
+    tmp_end_page /= PAGE_TABLE_SIZE;
+    for(i = tmp_start_page; i <= tmp_end_page ; i++){
+        printf(" mapping3: %08x %08x %08x %08x ",   i, (uint32_t)&pagetables_phys_addr[last_pagetable_idx+1], tmp_start_page, tmp_end_page);
+        kernel_pagedir_phys_addr->entries[i] = ((uint32_t)&pagetables_phys_addr[last_pagetable_idx++]) | flags; // map phys addresses to +0xC0000000 virt addr
+    }
+    
+    tmp_start_page = 0xC0000000 / PAGE_SIZE;
+    tmp_end_page = 0xC0400000 / PAGE_SIZE;
+    for (uint32_t i= tmp_start_page; i<tmp_end_page; i++){
+        // printf(" mapping2: %08x %08x %08x %08x", i,i*PAGE_SIZE| flags, high_mem_start_page, high_mem_end_page);
+        if( i >= 0xC0005 && i < 0xC0006){
+            pagetables_phys_addr[last_pagetable_idx + (i-tmp_start_page)/PAGE_TABLE_SIZE].entries[i%PAGE_TABLE_SIZE] = (i * PAGE_SIZE) | flags;
+        }else{
+            pagetables_phys_addr[last_pagetable_idx + (i-tmp_start_page)/PAGE_TABLE_SIZE].entries[i%PAGE_TABLE_SIZE] = ( (i-tmp_start_page) * PAGE_SIZE) | flags;
+        }
+        // map_phys_to_virt(&kernel_pagedir, i*PAGE_SIZE, i*PAGE_SIZE, flags, 1);
+    }
+    tmp_start_page = 0xC0005000 / PAGE_SIZE;
+    tmp_end_page = 0xC0006000 / PAGE_SIZE;
+    tmp_start_page /= PAGE_TABLE_SIZE;
+    tmp_end_page /= PAGE_TABLE_SIZE;
+    for(i = tmp_start_page; i <= tmp_end_page ; i++){
+        printf(" mapping4: %08x %08x %08x %08x ", i, (uint32_t)&pagetables_phys_addr[last_pagetable_idx+1], tmp_start_page, tmp_end_page);
+        kernel_pagedir_phys_addr->entries[i] = ((uint32_t)&pagetables_phys_addr[last_pagetable_idx++]) | flags; // map phys addresses to +0xC0000000 virt addr
+    }
+    
 
-
-    last_pagetable_idx = kernel_end_pde;
+    
+    
+    // last_pagetable_idx = kernel_end_pde;
     enable_paging((page_directory_t*) kernel_pagedir_phys_addr);
     printf(" paging enabled ");
-    // while(1);
 
 }
 

@@ -8,6 +8,7 @@ _mstart:
     ; Ensure protected mode segment registers
     push ebp
     mov ebp, esp
+    pushad
 
 ; step 0 save stuff
     sgdt [_gdt_descriptor]
@@ -160,14 +161,16 @@ enabled_idt:
 
     sti
 
-    xor eax, eax
-    movzx eax, word [0x6000]
 
-    mov ebx, 0
-    ; call print_h32  
 
     mov ebp, [_esp]
     mov esp, ebp
+
+    popad
+
+    xor eax, eax
+    movzx eax, word [0x6000]
+    
     pop ebp
     ret
 

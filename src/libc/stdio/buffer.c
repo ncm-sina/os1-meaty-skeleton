@@ -6,21 +6,49 @@
 
 
 // Helper function to convert an integer to a decimal string
-static void itoa(int num, char *buf) {
+static void itoa(int64_t num, char *buf) {
     if (num == 0) {
         buf[0] = '0';
         buf[1] = '\0';
         return;
     }
 
-    int i = 0;
+    int64_t i = 0;
     if (num < 0) {
         buf[i++] = '-';
         num = -num;
     }
 
-    int temp = num;
-    int digits = 0;
+    int64_t temp = num;
+    int64_t digits = 0;
+    while (temp > 0) {
+        digits++;
+        temp /= 10;
+    }
+
+    buf[i + digits] = '\0';
+    while (num > 0) {
+        buf[i + digits - 1] = (num % 10) + '0';
+        num /= 10;
+        digits--;
+    }
+}
+
+static void utoa(uint64_t num, char *buf) {
+    if (num == 0) {
+        buf[0] = '0';
+        buf[1] = '\0';
+        return;
+    }
+
+    uint64_t i = 0;
+    if (num < 0) {
+        buf[i++] = '-';
+        num = -num;
+    }
+
+    uint64_t temp = num;
+    uint64_t digits = 0;
     while (temp > 0) {
         digits++;
         temp /= 10;
@@ -231,27 +259,61 @@ void format_string(char *output, const char *fstring, va_list args) {
                 case 's': {
                     const char *str = va_arg(args, const char *);
                     while (*str) *out++ = *str++;
+                    width=0;
+                    use_prefix=0;
+                    precision=6;
                     break;
                 }
+                case 'U': {
+                    uint64_t num = va_arg(args, uint64_t);
+                    char num_buf[20];
+                    utoa(num, num_buf);
+                    char *p = num_buf;
+                    while (*p) *out++ = *p++;
+                    width=0;
+                    use_prefix=0;
+                    precision=6;
+                    break;
+                }                
                 case 'u': {
-                    int num = va_arg(args, unsigned int);
+                    uint32_t num = va_arg(args, uint32_t);
+                    char num_buf[20];
+                    utoa(num, num_buf);
+                    char *p = num_buf;
+                    while (*p) *out++ = *p++;
+                    width=0;
+                    use_prefix=0;
+                    precision=6;
+                    break;
+                }
+                case 'D': {
+                    int64_t num = va_arg(args, int64_t);
                     char num_buf[20];
                     itoa(num, num_buf);
                     char *p = num_buf;
                     while (*p) *out++ = *p++;
+                    width=0;
+                    use_prefix=0;
+                    precision=6;
                     break;
                 }
                 case 'd': {
-                    int num = va_arg(args, int);
+                    int32_t num = va_arg(args, int32_t);
                     char num_buf[20];
                     itoa(num, num_buf);
                     char *p = num_buf;
                     while (*p) *out++ = *p++;
+                    width=0;
+                    use_prefix=0;
+                    precision=6;
                     break;
                 }
                 case 'c': {
                     char c = (char)va_arg(args, int);
                     *out++ = c;
+                    width=0;
+                    use_prefix=0;
+                    precision=6;
                     break;
                 }
                 case 'x': {
@@ -260,6 +322,9 @@ void format_string(char *output, const char *fstring, va_list args) {
                     itohex(num, hex_buf, 0, width, use_prefix);
                     char *p = hex_buf;
                     while (*p) *out++ = *p++;
+                    width=0;
+                    use_prefix=0;
+                    precision=6;
                     break;
                 }
                 case 'X': {
@@ -268,6 +333,9 @@ void format_string(char *output, const char *fstring, va_list args) {
                     itohex(num, hex_buf, 1, width, use_prefix);
                     char *p = hex_buf;
                     while (*p) *out++ = *p++;
+                    width=0;
+                    use_prefix=0;
+                    precision=6;
                     break;
                 }
                 case 'f': {
@@ -276,6 +344,9 @@ void format_string(char *output, const char *fstring, va_list args) {
                     dtoaf(num, float_buf, width, precision);
                     char *p = float_buf;
                     while (*p) *out++ = *p++;
+                    width=0;
+                    use_prefix=0;
+                    precision=6;
                     break;
                 }
                 default:
