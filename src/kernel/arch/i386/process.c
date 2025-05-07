@@ -145,7 +145,8 @@ void init_processes() {
 // }
 
 static void print_module_info(multiboot_module_t *mod){
-    printf("\n mod_start: %08X | mod_end: %08X | cmdline: %s ", mod->mod_start, mod->mod_end, mod->cmdline);
+    printf("\n mod_start: %08x | mod_end: %08x" , mod->mod_start, mod->mod_end);
+    printf(" | cmdline: %s ", mod->cmdline);
 }
 
 // static void print_module_header(ModuleHeader_t header){
@@ -185,21 +186,11 @@ multiboot_module_t* get_multiboot_mod_by_name(multiboot_info_t* mbi, const char*
 void load_16bit_executer(multiboot_info_t* mbi){
     multiboot_module_t *mod = 0;
     mod = get_multiboot_mod_by_name(mbi, "16bit-executer.mod");
-    printf(" 1 ");
-    print_module_info(mod);
-    printf(" 2 ");
+    // print_module_info(mod);
     if (mod->mod_start >= mod->mod_end) {
         printf("Invalid module\n");
         return;
     }
-
-    // ModuleHeader* header = (ModuleHeader*)&mod->mod_start;
-    // print_module_header(*header);
-
-    // if (header->text_end <= header->text_start || header->data_end <= header->data_start) {
-    //     printf("Invalid header\n");
-    //     return;
-    // }
 
     uint32_t j = 0;
     uint32_t i = 0;
@@ -209,39 +200,28 @@ void load_16bit_executer(multiboot_info_t* mbi){
     for(i = 0; i < mod->mod_end - mod->mod_start && i<MAX_MOD_SIZE; i++){
         dst[i] = src[i];
     }
-    // for (i = 0; i < sizeof(*header); i++) {
-    //     dst[i] = src[i];
-    // }
-    // j+=i;
-    
-    // /* Copy .text to 0x1020 */
-    // // src = (uint8_t*) &src[j];
-    // // dst = (uint8_t*)0x1020;
-    // for (i = 0; i < header->text_end - header->text_start; i++) {
-    //     dst[i+j] = src[i+j];
-    // }
-    // j+=i;
-
-    // /* Copy .data to 0x1F00 */
-    // // src = (uint8_t*) &src[j];
-    // // dst = (uint8_t*)0x1F00;
-    // for (i = 0; i < header->data_end - header->data_start; i++) {
-    //     dst[i+j] = src[i+j];
-    // }
 
     return;
+}
 
-    // uint8_t* src = (uint8_t*)mod.mod_start;
-    // uint8_t* dst = (uint8_t*)0x1000;
-    // uint32_t size = mod.mod_end - mod.mod_start;
-    // for (uint32_t i = 0; i < size; i++) {
-    //     dst[i] = src[i];
-    // }    
+static void load_fonts(multiboot_info_t* mbi){
+    multiboot_module_t *mod = 0;
+    mod = get_multiboot_mod_by_name(mbi, "Inconsolata-16r.psf");
+    printf("\n");
+    print_module_info(mod);
+    printf("\n");
+    if (mod->mod_start >= mod->mod_end) {
+        printf("Invalid module\n");
+        return;
+    }
+
+    vbe_load_font(mod->mod_start);
 }
 
 void load_multiboot_mods(multiboot_info_t* mbi) {
     // get 16bit-executer.mod info
     load_16bit_executer(mbi);
+    load_fonts(mbi);
 
     // }else{
     //     printf("Module %s not found2\n", name);

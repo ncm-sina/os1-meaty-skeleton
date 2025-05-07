@@ -63,6 +63,10 @@ typedef struct {
     uint32_t di;
 } __attribute__((packed)) vbe_bios_call_t;
 
+typedef struct {
+    uint8_t r, g, b;
+} color_t;
+
 void print_vbe_info_block(vbe_info_block_t *info);
 void print_vbe_mode_info(vbe_mode_info_t *mode);
 
@@ -74,6 +78,13 @@ int vbe_clear_screen(uint32_t color/*, vbe_mode_info_t *mode_info*/);
 int vbe_set_text_mode(void);
 int vbe_is_text_mode(void);
 
+void vbe_load_font(uint32_t font_start);
+void vbe_set_fg_color(uint8_t r, uint8_t g, uint8_t b);
+void vbe_set_bg_color(uint8_t r, uint8_t g, uint8_t b);
+void vbe_reset_textcolor(void);
+void vbe_putchar_at(char c, int x, int y);
+void vbe_putchar(char c);
+
 // Map the framebuffer to a virtual address
 // void vbe_map_framebuffer(void);
 
@@ -84,12 +95,12 @@ int vbe_is_text_mode(void);
 // // Fill a rectangle at (x, y) with width and height
 // void vbe_fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t color);
 
-typedef struct{
-    uint32_t fb_addr;
-    uint32_t width, height, pitch;
-    uint8_t bpp;    
-} framebuffer_t;
-framebuffer_t framebuffer;
+// typedef struct{
+//     uint32_t fb_addr;
+//     uint32_t width, height, pitch;
+//     uint8_t bpp;    
+// } framebuffer_t;
+// framebuffer_t framebuffer;
 
 
 #endif

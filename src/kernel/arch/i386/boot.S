@@ -22,8 +22,8 @@ multiboot_header:
     .long 0  /* bss_end_addr */
     .long 0  /* entry_addr */
     .long 0  /* mode_type */
-    .long 1024  /* width 1024*/
-    .long 768  /* height 768*/
+    .long 1600  /* width 1024*/
+    .long 900  /* height 768*/
     .long 24  /* depth 32*/
 
 # Kernel virtual base address

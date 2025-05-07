@@ -5,16 +5,12 @@
 #include <string.h>
 
 
-// #ifndef FRAMEBUFFER_VADDR
 #define FRAMEBUFFER_VADDR 0xD0000000
-// #endif
-// #ifndef VBE_INFO
+
 #define VBE_INFO 0x9000
-// #endif
-// #ifndef VBE_MINFO
+
 #define VBE_MINFO 0xA000
 #define VBE_MODE_LIST 0x9400
-// #endif
 
 #define VBE_USE_BGR 1
 
@@ -44,6 +40,43 @@ vbe_info_block_t* vbe_info = (vbe_info_block_t*) VBE_INFO;
 vbe_mode_info_t* mode_info = (vbe_mode_info_t*) VBE_MINFO;
 // uint32_t* framebuffer = (uint32_t*) FRAMEBUFFER_VADDR;
 uint64_t framebuffer_addr; // framebuffer physical address or dynamic vaddr (we should map this to a fixed address later)
+
+
+typedef struct {
+    uint16_t magic;
+    uint8_t mode;
+    uint8_t charsize;
+} psf1_header_t;
+
+typedef struct {
+    uint32_t magic;
+    uint32_t version;
+    uint32_t headersize;
+    uint32_t flags;
+    uint32_t numglyph;
+    uint32_t bytesperglyph;
+    uint32_t height;
+    uint32_t width;
+} psf2_header_t;
+
+uint8_t *font_bitmap = (uint8_t *)0xD1000000;
+int num_chars;
+int char_height;
+int char_width;
+int bytes_per_glyph;
+uint8_t unicode_to_glyph[65536];
+color_t fg_color = {255, 255, 255};
+color_t bg_color = {0, 0, 0};
+int cursor_col = 0;
+int cursor_row = 0;
+
+int max_col;
+int max_row;
+
+// extern uint16_t screen_width;
+// extern uint16_t screen_height;
+// extern uint8_t *frame_buffer;
+// extern uint16_t pitch;
 
 
 // External page table mapping function (you must implement)
@@ -154,6 +187,10 @@ int32_t vbe_init(void) {
 
     if (!(_mbi->flags & (1 << 12))) return -5;
     framebuffer_addr = _mbi->framebuffer_addr; // Physical address
+    // *mode_info = (vbe_mode_info_t) _mbi->vbe_mode_info;
+    // *vbe_info =  (vbe_info_block_t) _mbi->vbe_control_info;
+    memcpy(mode_info, (void *)_mbi->vbe_mode_info, sizeof(vbe_mode_info_t));
+    memcpy(vbe_info, (void *)_mbi->vbe_control_info, sizeof(vbe_info_block_t));
     // framebuffer = (uint32_t *) framebuffer_addr;
     // return res;
     return 0;
@@ -266,13 +303,13 @@ int vbe_get_current_mode(uint16_t *mode) {
 // commented out because in my paging setup we dont need mapping like this
 // we assign premapped pagedirs to processes
 // void vbe_map_framebuffer(void) {
-//     uint32_t fb_addr = mode_info->framebuffer;
+//     uint32_t framebuffer = mode_info->framebuffer;
 //     uint32_t fb_size = mode_info->height * mode_info->pitch;
 //     uint32_t virt_addr = FRAMEBUFFER_VADDR;
 
 //     // Map pages (PAGE_PRESENT | PAGE_WRITE)
 //     for (uint32_t offset = 0; offset < fb_size; offset += 0x1000) {
-//         map_page(fb_addr + offset, virt_addr + offset, 0x3);
+//         map_page(framebuffer + offset, virt_addr + offset, 0x3);
 //     }
 // }
 
@@ -571,23 +608,23 @@ int vbe_clear_screen(uint32_t color/*, vbe_mode_info_t *mode_info*/) {
 
     // Step 1: Get framebuffer info from _mbi or mode_info
     if (_mbi->flags & (1 << 12)) {
-        framebuffer.fb_addr = (uint32_t) _mbi->framebuffer_addr;
-        framebuffer.width = _mbi->framebuffer_width;
-        framebuffer.height = _mbi->framebuffer_height;
-        framebuffer.pitch = _mbi->framebuffer_pitch;
-        framebuffer.bpp = _mbi->framebuffer_bpp; 
+        // mode_info->framebuffer = (uint32_t) _mbi->framebuffer_addr;
+        // mode_info->width = _mbi->framebuffer_width;
+        // mode_info->height = _mbi->framebuffer_height;
+        // mode_info->pitch = _mbi->framebuffer_pitch;
+        // mode_info->bpp = _mbi->framebuffer_bpp; 
 
         // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
         // print_multiboot_info(_mbi);
-        // printf("fb_addr: %08x width: %d height: %d pitch: %d bpp: %d ", framebuffer.fb_addr, framebuffer.width, framebuffer.height, framebuffer.pitch, framebuffer.bpp);
+        // printf("framebuffer: %08x width: %d height: %d pitch: %d bpp: %d ", mode_info->framebuffer, mode_info->width, mode_info->height, mode_info->pitch, mode_info->bpp);
         // while(1);
     }/* else if (mode_info != NULL) {
-        framebuffer.fb_addr = mode_info->framebuffer;
-        framebuffer.width = mode_info->width;
-        framebuffer.height = mode_info->height;
-        framebuffer.pitch = mode_info->pitch;
-        framebuffer.bpp = mode_info->bpp;
-        // printf("fb_addr: %08x width: %d height: %d pitch: %d bpp: %d ", fb_addr, width, height, pitch, bpp);
+        mode_info->framebuffer = mode_info->framebuffer;
+        mode_info->width = mode_info->width;
+        mode_info->height = mode_info->height;
+        mode_info->pitch = mode_info->pitch;
+        mode_info->bpp = mode_info->bpp;
+        // printf("framebuffer: %08x width: %d height: %d pitch: %d bpp: %d ", framebuffer, width, height, pitch, bpp);
     // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
     //     printf(" 222 ");
     }*/ else {
@@ -606,28 +643,28 @@ int vbe_clear_screen(uint32_t color/*, vbe_mode_info_t *mode_info*/) {
     // print_multiboot_info(_mbi);
 
     // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
-    // printf("fb_addr: %08x width: %d ", fb_addr, width, height, bpp);
+    // printf("framebuffer: %08x width: %d ", framebuffer, width, height, bpp);
     // printf("height: %d bpp: %d", height, bpp);
     // printf("pitch: %u", pitch);
     // while(1);
     // Step 3: Clear the screen
-    uint8_t *fb = (uint8_t *)(uintptr_t)framebuffer.fb_addr;
+    uint8_t *fb = (uint8_t *)(uintptr_t)mode_info->framebuffer;
     uint32_t row, col;
     // bpp=24;
-    if (framebuffer.bpp == 32) {
+    if (mode_info->bpp == 32) {
         uint32_t *fb32 = (uint32_t *)fb;
-        for (row = 0; row < framebuffer.height; row++) {
-            for (col = 0; col < framebuffer.width; col++) {
-                fb32[row * (framebuffer.pitch / 4) + col] = color;
+        for (row = 0; row < mode_info->height; row++) {
+            for (col = 0; col < mode_info->width; col++) {
+                fb32[row * (mode_info->pitch / 4) + col] = color;
             }
         }
-    }else if (framebuffer.bpp == 24) {
+    }else if (mode_info->bpp == 24) {
         uint8_t r = (color >> 16) & 0xFF;
         uint8_t g = (color >> 8) & 0xFF;
         uint8_t b = color & 0xFF;
-        for (row = 0; row < framebuffer.height; row++) {
-            uint8_t *row_ptr = fb + row * framebuffer.pitch;
-            for (col = 0; col < framebuffer.width; col++) {
+        for (row = 0; row < mode_info->height; row++) {
+            uint8_t *row_ptr = fb + row * mode_info->pitch;
+            for (col = 0; col < mode_info->width; col++) {
 #if VBE_USE_BGR
                 row_ptr[col * 3 + 0] = b; // Blue
                 row_ptr[col * 3 + 1] = g; // Green
@@ -642,9 +679,9 @@ int vbe_clear_screen(uint32_t color/*, vbe_mode_info_t *mode_info*/) {
     } else { // bpp == 16
         uint16_t *fb16 = (uint16_t *)fb;
         uint16_t color16 = (uint16_t)color; // Truncate to 16-bit
-        for (row = 0; row < framebuffer.height; row++) {
-            for (col = 0; col < framebuffer.width; col++) {
-                fb16[row * (framebuffer.pitch / 2) + col] = color16;
+        for (row = 0; row < mode_info->height; row++) {
+            for (col = 0; col < mode_info->width; col++) {
+                fb16[row * (mode_info->pitch / 2) + col] = color16;
             }
         }
     }
@@ -674,23 +711,28 @@ int vbe_is_text_mode(void) {
 
 // Draw a pixel
 void vbe_draw_pixel(uint16_t x, uint16_t y, uint32_t color) {
-    if(x >= framebuffer.width || x < 0 || y>=framebuffer.height || y<0){
+    if(x >= mode_info->width || x < 0 || y>=mode_info->height || y<0){
+        if(vbe_set_text_mode()) printf("5error setting text mode err\n");
+        printf("err fb:%08x w:%08x h:%08x x:%d y:%d color:%08x", mode_info->framebuffer, mode_info->width, mode_info->height, x,y,color );
         while(1);
         return;
     }
-    uint8_t *fb = (uint8_t *)(uintptr_t)framebuffer.fb_addr;
-    if(framebuffer.bpp == 32){
+    uint8_t *fb = (uint8_t *)(uintptr_t)mode_info->framebuffer;
+    if(mode_info->bpp == 32){
         uint32_t *fb32 = (uint32_t *)fb;
-        fb32[y * (framebuffer.pitch / 4) + x] = color;
-        if (x < framebuffer.width && y < framebuffer.height) {
-            uint32_t offset = y * (framebuffer.pitch / 4) + x;
-            fb32[y * (framebuffer.pitch / 4) + x] = color;
+        fb32[y * (mode_info->pitch / 4) + x] = color;
+        if (x < mode_info->width && y < mode_info->height) {
+            uint32_t offset = y * (mode_info->pitch / 4) + x;
+            fb32[y * (mode_info->pitch / 4) + x] = color;
         }
-    }else if(framebuffer.bpp == 24){
+    }else if(mode_info->bpp == 24){
+        // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
         uint8_t r = (color >> 16) & 0xFF;
         uint8_t g = (color >> 8) & 0xFF;
         uint8_t b = color & 0xFF;
-        uint8_t *row_ptr = fb + y * framebuffer.pitch;
+        uint8_t *row_ptr = fb + y * mode_info->pitch;
+        // printf("(%08x %d %d %08x)",mode_info->pitch, x, y, color);
+        // while(1);
 #if VBE_USE_BGR
         row_ptr[x * 3 + 0] = b; // Blue
         row_ptr[x * 3 + 1] = g; // Green
@@ -702,20 +744,263 @@ void vbe_draw_pixel(uint16_t x, uint16_t y, uint32_t color) {
 #endif
 
     }
-// if (x < framebuffer.width && y < framebuffer.height) {
-//     uint32_t offset = y * (framebuffer.pitch / 4) + x;
-//     framebuffer.fb_addr[offset] = color;
+// if (x < mode_info->width && y < mode_info->height) {
+//     uint32_t offset = y * (mode_info->pitch / 4) + x;
+//     mode_info->framebuffer[offset] = color;
 // }
 }
 
 // Fill a rectangle
 void vbe_fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t color) {
-    uint8_t *fb = (uint8_t *)(uintptr_t)framebuffer.fb_addr;
+    uint8_t *fb = (uint8_t *)(uintptr_t)mode_info->framebuffer;
 
     for (uint16_t j = y; j < y + height && j < height; j++) {
         for (uint16_t i = x; i < x + width && i < width; i++) {
-            uint32_t offset = j * (framebuffer.pitch / 4) + i;
+            uint32_t offset = j * (mode_info->pitch / 4) + i;
             fb[offset] = color;
         }
     }
 }
+
+static int utf8_sequence_length(uint8_t byte) {
+    if (byte < 0x80) return 1;
+    else if ((byte & 0xE0) == 0xC0) return 2;
+    else if ((byte & 0xF0) == 0xE0) return 3;
+    else if ((byte & 0xF8) == 0xF0) return 4;
+    else return 1; // invalid
+}
+
+static uint32_t read_utf8(uint8_t **p) {
+    uint8_t *s = *p;
+    if (*s < 0x80) {
+        *p += 1;
+        return *s;
+    } else if ((*s & 0xE0) == 0xC0) {
+        uint32_t cp = ((*s & 0x1F) << 6) | (s[1] & 0x3F);
+        *p += 2;
+        return cp;
+    } else if ((*s & 0xF0) == 0xE0) {
+        uint32_t cp = ((*s & 0x0F) << 12) | ((s[1] & 0x3F) << 6) | (s[2] & 0x3F);
+        *p += 3;
+        return cp;
+    } else if ((*s & 0xF8) == 0xF0) {
+        uint32_t cp = ((*s & 0x07) << 18) | ((s[1] & 0x3F) << 12) | ((s[2] & 0x3F) << 6) | (s[3] & 0x3F);
+        *p += 4;
+        return cp;
+    } else {
+        *p += 1;
+        return *s; // invalid
+    }
+}
+
+uint32_t color_to_uint32(color_t c) {
+    return (c.r << 16) | (c.g << 8) | c.b;
+}
+
+void draw_char_at(char c, int x, int y) {
+    // printf("drawcharat: %c %d %d ", c, x, y);
+    uint8_t code = (uint8_t)c;
+    uint8_t glyph = unicode_to_glyph[code];
+    if (glyph == 255) {
+        glyph = unicode_to_glyph['?'];
+        if (glyph == 255) return;
+    }
+    uint8_t *char_bitmap = font_bitmap + glyph * bytes_per_glyph;
+    printf("\n");
+    for (int i = 0; i < char_height; i++) {
+        uint8_t row = char_bitmap[i];
+        for (int j = 0; j < char_width; j++) {
+            int bit = (row >> (7 - j)) & 1;
+            uint32_t color = bit ? color_to_uint32(fg_color) : color_to_uint32(bg_color);
+            // printf("(%d %d, %08x)",x + j, y + i, color );
+            // vga_put_char_at(2+j,2+i,color?'0':'.');
+            vbe_draw_pixel(x + j, y + i, color);
+        }
+    }
+}
+
+void scroll_up() {
+    memmove(mode_info->framebuffer, mode_info->framebuffer + mode_info->pitch * char_height, mode_info->pitch * (mode_info->height - char_height));
+    for (int i = mode_info->height - char_height; i < mode_info->height; i++) {
+        uint8_t *row = mode_info->framebuffer + i * mode_info->pitch;
+        for (int j = 0; j < mode_info->width; j++) {
+            uint32_t color = color_to_uint32(bg_color);
+            uint8_t *pixel = row + j * 3;
+            pixel[0] = color & 0xFF;
+            pixel[1] = (color >> 8) & 0xFF;
+            pixel[2] = (color >> 16) & 0xFF;
+        }
+    }
+}
+
+// void vbe_load_font(uint32_t font_start) {
+//     psf1_header_t *header = (psf1_header_t *)font_start;
+//     printf(" will load font ");
+//     if (header->magic != 0x0436) {
+//         printf(" wrong font magic:%08x %08x ", &header->magic, header->magic);
+//         return;
+//     }
+//     uint8_t mode = header->mode;
+//     char_height = header->charsize;
+//     num_chars = (mode & 0x02) ? 512 : 256;
+//     size_t bitmap_size = num_chars * char_height;
+//     uint8_t *src = (uint8_t *)(font_start + sizeof(psf1_header_t));
+//     memcpy(font_bitmap, src, bitmap_size);
+//     max_col = mode_info->width / 8;
+//     max_row = mode_info->height / char_height;
+//     printf("\n font loaded: mode:0x%02x char_height:0x%02x num_chars:0x%02x bitmap_size:0x%02x max_col:0x%02x max_row:0x%02x ", mode, char_height, num_chars, bitmap_size,max_col, max_row);
+// }
+// void vbe_load_font(uint32_t font_start) {
+//     psf2_header_t *header = (psf2_header_t *)font_start;
+//     // printf("  ");
+//     if (header->magic != 0x864ab572) {
+//         return;
+//     }
+//     char_height = header->height;
+//     char_width = header->width;
+//     num_chars = header->numglyph;
+//     size_t bitmap_size = num_chars * header->bytesperglyph;
+//     uint8_t *src = (uint8_t *)(font_start + header->headersize);
+//     memcpy(font_bitmap, src, bitmap_size);
+//     max_col = mode_info->width / char_width;
+//     max_row = mode_info->height / char_height;
+//     printf("\n font loaded: font_start: %08x char_width:%02x char_height:%02x num_chars:%08x bitmap_size:%08x headersize:%08x version:%08x flags:%08x max_col:%d max_row:%d ", font_start, char_width, char_height, num_chars, bitmap_size, header->headersize, header->version, header->flags, max_col, max_row);
+
+// }
+void vbe_load_font(uint32_t font_start) {
+    psf2_header_t *header = (psf2_header_t *)font_start;
+    if (header->magic != 0x864ab572) {
+        return;
+    }
+    char_height = header->height;
+    char_width = header->width;
+    num_chars = header->numglyph;
+    bytes_per_glyph = header->bytesperglyph;
+    size_t bitmap_size = num_chars * bytes_per_glyph;
+    uint8_t *src = (uint8_t *)(font_start + header->headersize);
+    memcpy(font_bitmap, src, bitmap_size);
+    max_col = mode_info->width / char_width;
+    max_row = mode_info->height / char_height;
+    // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
+    // printf("width:%d height:%d charwidth:%d charheight:%d max_row:%d max_col:%d", mode_info->width, mode_info->height, char_width, char_height, max_row, max_col);
+    // print_vbe_mode_info(mode_info);    
+    // while(1);
+
+
+    if (header->flags & 1) {
+        uint8_t *p = (uint8_t *)(font_start + header->headersize + header->numglyph * header->bytesperglyph);
+        memset(unicode_to_glyph, 255, sizeof(unicode_to_glyph));
+        for (int glyph = 0; glyph < header->numglyph; glyph++) {
+            while (1) {
+                if (*p == 0xFF) {
+                    p++;
+                    break;
+                } else if (*p == 0xFE) {
+                    p++;
+                    while (*p != 0xFE && *p != 0xFF) {
+                        int len = utf8_sequence_length(*p);
+                        p += len;
+                    }
+                } else {
+                    uint8_t *start = p;
+                    uint32_t code_point = read_utf8(&p);
+                    if (code_point < 65536 && unicode_to_glyph[code_point] == 255) {
+                        unicode_to_glyph[code_point] = glyph;
+                    }
+                    if (p == start) {
+                        p++; // invalid UTF-8
+                    }
+                }
+            }
+        }
+    } else {
+        for (int i = 0; i < header->numglyph && i < 65536; i++) {
+            unicode_to_glyph[i] = i;
+        }
+    }
+}
+
+
+void vbe_set_fg_color(uint8_t r, uint8_t g, uint8_t b) {
+    fg_color.r = r;
+    fg_color.g = g;
+    fg_color.b = b;
+}
+
+void vbe_set_bg_color(uint8_t r, uint8_t g, uint8_t b) {
+    bg_color.r = r;
+    bg_color.g = g;
+    bg_color.b = b;
+}
+
+void vbe_reset_textcolor(void) {
+    fg_color = (color_t){255, 255, 255};
+    bg_color = (color_t){0, 0, 0};
+}
+
+void vbe_putchar_at(char c, int x, int y) {
+    draw_char_at(c, x, y);
+}
+
+
+void vbe_putchar(char c) {
+    // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
+    // printf("printing:%c ", c);
+    if (c == '\n') {
+        cursor_col = 0;
+        if (cursor_row < max_row - 1) {
+            cursor_row++;
+        } else {
+            scroll_up();
+            cursor_row = max_row - 1;
+        }
+    } else if (c == '\r') {
+        cursor_col = 0;
+    } else {
+        int char_x = cursor_col * char_width;
+        int char_y = cursor_row * char_height;
+        if(char_x>=1600){
+            if(vbe_set_text_mode()) printf("5error setting text mode err\n");
+            printf("char_x:%d char_y:%d cursor_col:%d cursor_row:%d char_width:%d char_height:%d max_row:%d max_col:%d", char_x, char_y, cursor_col, cursor_row, char_width, char_height, max_row, max_col);
+            while(1);
+        }
+        draw_char_at(c, char_x, char_y);
+        cursor_col++;
+        if (cursor_col+1 >= max_col) {
+            cursor_col = 0;
+            if (cursor_row+1 < max_row - 1) {
+                cursor_row++;
+            } else {
+                scroll_up();
+                cursor_row = max_row - 1;
+            }
+        }
+    }
+}
+// void vbe_putchar(char c) {
+//     if (c == '\n') {
+//         cursor_col = 0;
+//         if (cursor_row < max_row - 1) {
+//             cursor_row++;
+//         } else {
+//             scroll_up();
+//             cursor_row = max_row - 1;
+//         }
+//     } else if (c == '\r') {
+//         cursor_col = 0;
+//     } else {
+//         int char_x = cursor_col * 8;
+//         int char_y = cursor_row * char_height;
+//         draw_char_at(c, char_x, char_y);
+//         cursor_col++;
+//         if (cursor_col >= max_col) {
+//             cursor_col = 0;
+//             if (cursor_row < max_row - 1) {
+//                 cursor_row++;
+//             } else {
+//                 scroll_up();
+//                 cursor_row = max_row - 1;
+//             }
+//         }
+//     }
+// }

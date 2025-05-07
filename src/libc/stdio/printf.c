@@ -88,71 +88,71 @@ va_end(args);
     return ret;
 }
 
-int vfprintf(FILE *stream, const char *format, va_list args) {
-    // Reuse fprintf logic (simplified)
-    char buf[1024];
-    int buf_pos = 0;
+// int vfprintf(FILE *stream, const char *format, va_list args) {
+//     // Reuse fprintf logic (simplified)
+//     char buf[1024];
+//     int buf_pos = 0;
 
-    for (int i = 0; format[i]; i++) {
-        if (format[i] != '%') {
-            if (buf_pos < 1024 - 1) buf[buf_pos++] = format[i];
-            continue;
-        }
-        i++;
-        if (!format[i]) break;
+//     for (int i = 0; format[i]; i++) {
+//         if (format[i] != '%') {
+//             if (buf_pos < 1024 - 1) buf[buf_pos++] = format[i];
+//             continue;
+//         }
+//         i++;
+//         if (!format[i]) break;
 
-        if (buf_pos > 0) {
-            if (write_buffer(stream, buf, buf_pos) < 0) return -1;
-            buf_pos = 0;
-        }
+//         if (buf_pos > 0) {
+//             if (write_buffer(stream, buf, buf_pos) < 0) return -1;
+//             buf_pos = 0;
+//         }
 
-        switch (format[i]) {
-            case 's': {
-                char *s = va_arg(args, char *);
-                if (!s) s = "(null)";
-                while (*s) {
-                    if (buf_pos < 1024 - 1) buf[buf_pos++] = *s++;
-                    if (buf_pos >= 1024 - 1) {
-                        if (write_buffer(stream, buf, buf_pos) < 0) return -1;
-                        buf_pos = 0;
-                    }
-                }
-                break;
-            }
-            case 'd': {
-                int d = va_arg(args, int);
-                char num[16];
-                int len = 0;
-                if (d < 0) {
-                    buf[buf_pos++] = '-';
-                    d = -d;
-                }
-                do {
-                    num[len++] = '0' + (d % 10);
-                    d /= 10;
-                } while (d);
-                for (int j = len - 1; j >= 0; j--) {
-                    if (buf_pos < 1024 - 1) buf[buf_pos++] = num[j];
-                    if (buf_pos >= 1024 - 1) {
-                        if (write_buffer(stream, buf, buf_pos) < 0) return -1;
-                        buf_pos = 0;
-                    }
-                }
-                break;
-            }
-            case 'c': {
-                char c = (char)va_arg(args, int);
-                if (buf_pos < 1024 - 1) buf[buf_pos++] = c;
-                break;
-            }
-            default:
-                if (buf_pos < 1024 - 1) buf[buf_pos++] = format[i];
-        }
-    }
+//         switch (format[i]) {
+//             case 's': {
+//                 char *s = va_arg(args, char *);
+//                 if (!s) s = "(null)";
+//                 while (*s) {
+//                     if (buf_pos < 1024 - 1) buf[buf_pos++] = *s++;
+//                     if (buf_pos >= 1024 - 1) {
+//                         if (write_buffer(stream, buf, buf_pos) < 0) return -1;
+//                         buf_pos = 0;
+//                     }
+//                 }
+//                 break;
+//             }
+//             case 'd': {
+//                 int d = va_arg(args, int);
+//                 char num[16];
+//                 int len = 0;
+//                 if (d < 0) {
+//                     buf[buf_pos++] = '-';
+//                     d = -d;
+//                 }
+//                 do {
+//                     num[len++] = '0' + (d % 10);
+//                     d /= 10;
+//                 } while (d);
+//                 for (int j = len - 1; j >= 0; j--) {
+//                     if (buf_pos < 1024 - 1) buf[buf_pos++] = num[j];
+//                     if (buf_pos >= 1024 - 1) {
+//                         if (write_buffer(stream, buf, buf_pos) < 0) return -1;
+//                         buf_pos = 0;
+//                     }
+//                 }
+//                 break;
+//             }
+//             case 'c': {
+//                 char c = (char)va_arg(args, int);
+//                 if (buf_pos < 1024 - 1) buf[buf_pos++] = c;
+//                 break;
+//             }
+//             default:
+//                 if (buf_pos < 1024 - 1) buf[buf_pos++] = format[i];
+//         }
+//     }
 
-    if (buf_pos > 0) {
-        if (write_buffer(stream, buf, buf_pos) < 0) return -1;
-    }
+//     if (buf_pos > 0) {
+//         if (write_buffer(stream, buf, buf_pos) < 0) return -1;
+//     }
 
-    return 0;
-}
+//     return 0;
+// }

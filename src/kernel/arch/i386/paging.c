@@ -320,12 +320,14 @@ void init_paging_stage1(multiboot_info_t* mbi) {
     // memory management mechanism) - we will use the last 16MB of available physical
     // ram for this
     uint32_t tmp_last_phys_addr = get_last_phys_ram_addr();
-    uint32_t tmp_start_phys_page = (tmp_last_phys_addr-0x01001000)/PAGE_SIZE;
+    uint32_t tmp_start_phys_page = (tmp_last_phys_addr-0x02001000)/PAGE_SIZE;
     uint32_t tmp_start_page, tmp_end_page;
     tmp_start_page = 0xD0000000 / PAGE_SIZE;
-    tmp_end_page = 0xD1000000 / PAGE_SIZE;
+    tmp_end_page = 0xD2000000 / PAGE_SIZE;
+    flags =  PAGE_PRESENT | PAGE_WRITE;
+    // printf(" premapping:%08x %08x %08x \n", tmp_start_page, tmp_end_page, tmp_start_phys_page);
     for (uint32_t i= 0; i<tmp_end_page - tmp_start_page; i++){
-        // printf(" mapping2: %08x %08x %08x %08x", i,i*PAGE_SIZE| flags, high_mem_start_page, high_mem_end_page);
+        // printf(" mapping2: %08x %08x %08x ", i,(i+tmp_start_phys_page)*PAGE_SIZE,((i+tmp_start_phys_page) * PAGE_SIZE) | flags);
         pagetables_phys_addr[last_pagetable_idx + (i)/PAGE_TABLE_SIZE].entries[i%PAGE_TABLE_SIZE] = ((i+tmp_start_phys_page) * PAGE_SIZE) | flags;
         // map_phys_to_virt(&kernel_pagedir, i*PAGE_SIZE, i*PAGE_SIZE, flags, 1);
     }
@@ -335,6 +337,40 @@ void init_paging_stage1(multiboot_info_t* mbi) {
         // printf(" mapping3: %08x %08x %08x %08x ",   i, (uint32_t)&pagetables_phys_addr[last_pagetable_idx+1], tmp_start_page, tmp_end_page);
         kernel_pagedir_phys_addr->entries[i] = ((uint32_t)&pagetables_phys_addr[last_pagetable_idx++]) | flags; // map phys addresses to +0xC0000000 virt addr
     }
+
+    // tmp_last_phys_addr = get_last_phys_ram_addr();
+    // tmp_start_phys_page = (tmp_last_phys_addr-0x01001000)/PAGE_SIZE;
+    // tmp_start_page, tmp_end_page;
+    // tmp_start_page = 0xDA000000 / PAGE_SIZE;
+    // tmp_end_page = 0xDA100000 / PAGE_SIZE;
+    // for (uint32_t i= 0; i<tmp_end_page - tmp_start_page; i++){
+    //     // printf(" mapping2: %08x %08x %08x %08x", i,i*PAGE_SIZE| flags, high_mem_start_page, high_mem_end_page);
+    //     pagetables_phys_addr[last_pagetable_idx + (i)/PAGE_TABLE_SIZE].entries[i%PAGE_TABLE_SIZE] = ((i+tmp_start_phys_page) * PAGE_SIZE) | flags;
+    //     // map_phys_to_virt(&kernel_pagedir, i*PAGE_SIZE, i*PAGE_SIZE, flags, 1);
+    // }
+    // tmp_start_page /= PAGE_TABLE_SIZE;
+    // tmp_end_page /= PAGE_TABLE_SIZE;
+    // for(i = tmp_start_page; i <= tmp_end_page ; i++){
+    //     // printf(" mapping3: %08x %08x %08x %08x ",   i, (uint32_t)&pagetables_phys_addr[last_pagetable_idx+1], tmp_start_page, tmp_end_page);
+    //     kernel_pagedir_phys_addr->entries[i] = ((uint32_t)&pagetables_phys_addr[last_pagetable_idx++]) | flags; // map phys addresses to +0xC0000000 virt addr
+    // }
+
+
+    // tmp_start_page = 0xDA000000 / PAGE_SIZE;
+    // tmp_end_page = 0xDA400000 / PAGE_SIZE;
+    // for (uint32_t i= 0; i<tmp_end_page - tmp_start_page; i++){
+    //     // printf(" mapping2: %08x %08x %08x %08x", i,i*PAGE_SIZE| flags, high_mem_start_page, high_mem_end_page);
+    //     pagetables_phys_addr[last_pagetable_idx + (i)/PAGE_TABLE_SIZE].entries[i%PAGE_TABLE_SIZE] = ( (i+tmp_start_page) * PAGE_SIZE) | flags;
+    //     // map_phys_to_virt(&kernel_pagedir, i*PAGE_SIZE, i*PAGE_SIZE, flags, 1);
+    // }
+    // tmp_start_page = 0xDA000000 / PAGE_SIZE;
+    // tmp_end_page = 0xDA400000 / PAGE_SIZE;
+    // tmp_start_page /= PAGE_TABLE_SIZE;
+    // tmp_end_page /= PAGE_TABLE_SIZE;
+    // for(i = tmp_start_page; i <= tmp_end_page ; i++){
+    //     // printf(" mapping4: %08x %08x %08x %08x ", i, (uint32_t)&pagetables_phys_addr[last_pagetable_idx+1], tmp_start_page, tmp_end_page);
+    //     kernel_pagedir_phys_addr->entries[i] = ((uint32_t)&pagetables_phys_addr[last_pagetable_idx++]) | flags; // map phys addresses to +0xC0000000 virt addr
+    // }
 
     
 

@@ -53,6 +53,7 @@ FILE *fopen(const char *path, const char *mode);
 int fclose(FILE *stream);
 int fprintf(FILE *stream, const char *format, ...);
 int printf(const char *format, ...);
+int printf2(const char *format, ...);
 int putchar(char ch);
 int vfprintf(FILE *stream, const char *format, va_list args);
 int sprintf(char *str, const char *format, ...);

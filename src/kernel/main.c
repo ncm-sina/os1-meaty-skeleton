@@ -96,7 +96,7 @@ static void init_graphics(){
     // vbe_list_supported_modes();
     // while(1);
     
-    vbe_clear_screen(0x2233cc/*, &tmp_vbe_minfo*/);
+    // vbe_clear_screen(0x2233cc/*, &tmp_vbe_minfo*/);
     // while(1);
     // if(res<0){
     //     if((res2 = vbe_set_text_mode()) < 0) printf("7error setting text mode err:%08x \n",res2);
@@ -124,9 +124,9 @@ void display_image(const uint8_t *bmp_buffer, uint32_t buffer_size) {
 
     int result = read_bmp(bmp_buffer, buffer_size, pixel_buffer, &width, &height);
     if (result != 0) {
-        if(vbe_set_text_mode()) printf("5error setting text mode err\n");
-        printf("res:%d ", result);
-        while(1);    
+        // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
+        // printf("res:%d ", result);
+        // while(1);    
         // Handle error (e.g., print to serial console)
         return;
     }
@@ -149,7 +149,7 @@ static void draw_background(multiboot_info_t* mbi){
         return;
     }
     
-    display_image( mod->mod_start, mod->mod_end - mod->mod_start );
+    display_image( mod->mod_start, mod->mod_end - mod->mod_start );    
     
 }
 
@@ -168,8 +168,17 @@ static void kernel_init(multiboot_info_t* mbi) {
     init_processes();
 
     // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
-    vbe_draw_pixel(10,10,0xFF0000);
-    draw_background(mbi);
+    // draw_background(mbi);
+    // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
+    vbe_set_fg_color(0xff,0x0, 0x0);
+    printf2("01234567890123456789012345678901234567890123456789");
+    vbe_set_fg_color(0xff,0xff, 0x0);
+    printf2("01234567890123456789012345678901234567890123456789");
+    vbe_set_fg_color(0x0, 0xff, 0x0);
+    printf2("01234567890123456789012345678901234567890123456789");
+    vbe_set_fg_color(0x0, 0xff, 0xff);
+    printf2("0");
+
     // vbe_clear_screen(0xFFFF00/*, &tmp_vbe_minfo*/);
     // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
     // print_multiboot_info(_mbi);

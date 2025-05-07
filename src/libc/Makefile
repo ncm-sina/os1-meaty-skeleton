@@ -34,6 +34,7 @@ stdio/fclose.o \
 stdio/fopen.o \
 stdio/buffer.o \
 stdio/printf.o \
+stdio/printf2.o \
 stdio/putchar.o \
 stdio/sprintf.o \
 stdio/scanf.o \
