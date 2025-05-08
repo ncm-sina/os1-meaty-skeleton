@@ -63,8 +63,8 @@ static void init_graphics(){
         printf("error init graph can't use os : %08x %d", res, res);
         return;
     }
-    vbe_info_block_t tmp_vbe_info;
-    memcpy(&tmp_vbe_info, 0x9000, sizeof(vbe_info_block_t));
+    // vbe_info_block_t tmp_vbe_info;
+    // memcpy(&tmp_vbe_info, 0x9000, sizeof(vbe_info_block_t));
     // if(res2 = vbe_set_text_mode()) printf("5error setting text mode err:%08x err2: %d \n", res2, res2);
     // printf("-> init graph res : %08x %d", res, res);
     // print_vbe_info_block(0x9000);
@@ -82,9 +82,9 @@ static void init_graphics(){
     //     // return;
     // }
     
-    vbe_mode_info_t tmp_vbe_minfo;
+    // vbe_mode_info_t tmp_vbe_minfo;
     // vbe_get_mode_info(0x118);
-    memcpy(&tmp_vbe_minfo, 0xA000, sizeof(vbe_mode_info_t));
+    // memcpy(&tmp_vbe_minfo, 0xA000, sizeof(vbe_mode_info_t));
     // if(res2 = vbe_set_text_mode()) printf("5error setting text mode err:%08x err2: %d \n", res2, res2);
     // print_vbe_info_block(&tmp_vbe_info);
     // print_vbe_mode_info(&tmp_vbe_minfo);
@@ -170,12 +170,8 @@ static void kernel_init(multiboot_info_t* mbi) {
     // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
     // draw_background(mbi);
     // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
-    vbe_set_fg_color(0xff,0x0, 0x0);
-    printf2("01234567890123456789012345678901234567890123456789");
-    vbe_set_fg_color(0xff,0xff, 0x0);
-    printf2("01234567890123456789012345678901234567890123456789");
-    vbe_set_fg_color(0x0, 0xff, 0x0);
-    printf2("01234567890123456789012345678901234567890123456789");
+    uint32_t tmpcolor;
+    // vbe_set_fg_color(0xFF,0xFF ,0xFF );
     vbe_set_fg_color(0x0, 0xff, 0xff);
     printf2("0");
 

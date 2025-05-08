@@ -2,10 +2,15 @@
 #include <kernel/arch/i386/paging.h>
 #include <stdio.h>
 #include <string.h>
+#include <kernel/drivers/vbe.h>
 
 #define MAX_MOD_SIZE 0xFFFFF
 
 extern uint32_t pagedir[1024];
+extern vbe_info_block_t* vbe_info;
+extern vbe_mode_info_t* mode_info;
+
+
 
 ProcessState process_state = {
     .process_table = {{0}},
@@ -214,6 +219,12 @@ static void load_fonts(multiboot_info_t* mbi){
         printf("Invalid module\n");
         return;
     }
+
+    memset(mode_info,0,0x200);
+    memset(vbe_info,0,0x200);
+    memcpy(mode_info, (void *)_mbi->vbe_mode_info, sizeof(vbe_mode_info_t));
+    memcpy(vbe_info, (void *)_mbi->vbe_control_info, sizeof(vbe_info_block_t));
+
 
     vbe_load_font(mod->mod_start);
 }
