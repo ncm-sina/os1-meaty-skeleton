@@ -1,8 +1,60 @@
 #!/bin/sh
-set -e
-. ./config.sh
+set -e 
+. ./config.sh 
 
-qemu-system-i386 -cdrom ../os1.iso -vga std -m 128M -accel whpx -s $1
+ 
+# -cdrom ../os1.iso
+qemu-system-i386 \
+-device ahci,id=ahci \
+-drive file=../os1.iso,format=raw,if=none,id=cdrom \
+-device ide-cd,drive=cdrom,bus=ahci.2,bootindex=1 \
+-drive file=../hd.img,format=raw,if=none,id=disk1 \
+-device ide-hd,drive=disk1,bus=ahci.0 \
+-drive file=../os2.iso,format=raw,if=none,id=disk2 \
+-device ide-hd,drive=disk2,bus=ahci.1 \
+-vga std \
+-m 128M \
+-accel tcg \
+-s -S
+# -cdrom ../os1.iso \
+
+
+# qemu-system-i386 \
+# -device ahci,id=ahci \
+# -drive file=../hd.img,format=raw,if=none,id=disk1 \
+# -device ide-hd,drive=disk1,bus=ahci.0 \
+# -drive file=../os1.iso,format=raw,if=none,id=cdrom \
+# -device ide-cd,drive=cdrom,bus=ahci.1 \
+# -vga std \
+# -m 128M \
+# -accel tcg \
+# -s -S
+# # -accel whpx \
+# # -machine q35 \
+# # -serial stdio \
+# # -monitor stdio \
+
+# qemu-system-i386 \
+# -device ahci,id=ahci \
+# -drive file=../hd.img,format=raw,if=none,id=disk1 \
+# -device ide-hd,drive=disk1,bus=ahci.0 \
+# -drive file=../os1.iso,format=raw,if=none,id=cdrom \
+# -device ide-cd,drive=cdrom,bus=ahci.1 \
+# -vga std \
+# -m 128M \
+# -accel whpx \
+# -s -S 
+
+
+# # -hda ../hd.img \
+# qemu-system-i386 \
+# -drive file=../hd.img,format=raw,if=none,id=disk1 \
+# -cdrom ../os1.iso \
+# -vga std \
+# -m 128M \
+# -accel whpx \
+# -s -S 
+
 # qemu-system-i386 -cdrom ../os1.iso -device VGA,vgamem_mb=32 -m 128M $1 
 # qemu-system-i386 -cdrom ../os1.iso -vga std -m 128M -s -d int -no-reboot -no-shutdown $1 
 # qemu-system-i386 -cdrom ../os1.iso -vga std -m 128M -s $1

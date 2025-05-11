@@ -30,3 +30,10 @@ set -e
 for PROJECT in $PROJECTS; do
   (cd $PROJECT && DESTDIR="$SYSROOT" $MAKE install )
 done
+
+mkdir -p ../sysroot
+mkdir -p ../sysroot/boot
+mkdir -p ../sysroot/boot/grub
+
+cp ../config/grub/. ../sysroot/boot/grub/. -fr
+

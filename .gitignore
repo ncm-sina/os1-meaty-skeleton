@@ -28,6 +28,8 @@
 .ionide
 
 *.iso
+*.img
+*.vhd
 isodir
 sysroot
 

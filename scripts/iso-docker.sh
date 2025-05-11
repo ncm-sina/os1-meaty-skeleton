@@ -23,3 +23,4 @@ cp ../isodir ../../docker/shared/ -fr
 
 /bin/sh ../../docker/docker-make-iso.sh
 cp ../../docker/shared/os0.iso ../os1.iso
+cp ../../docker/shared/os0.iso ../os2.iso

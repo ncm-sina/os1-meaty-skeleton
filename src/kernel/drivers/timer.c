@@ -2,10 +2,10 @@
 #include <kernel/arch/i386/isrs/timer.h>
 #include <kernel/mport.h>
 
-static uint32_t ticks = 0;
+uint32_t timer_ticks = 0;
 
 static void timer_handle_tick(void) {
-    ticks++;
+    timer_ticks++;
 }
 
 static void set_tick_hz() { // here we change tick speed from 18.2Hz to 100Hz
@@ -23,12 +23,12 @@ static void timer_init(void) {
 
     set_tick_hz();
 
-    ticks = 0;
+    timer_ticks = 0;
     isr_timer_register_handler(timer_handle_tick);
 }
 
 static uint32_t timer_get_ticks(void) {
-    return ticks;
+    return timer_ticks;
 }
 
 struct timer_driver timer_drv = {

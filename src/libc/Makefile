@@ -50,6 +50,10 @@ string/strlen.o \
 string/strcmp.o \
 string/stricmp.o \
 string/strncmp.o \
+string/strncpy.o \
+string/strchr.o \
+string/strrchr.o \
+string/snprintf.o \
 errno.o \
 fcntl.o \
 mman.o \

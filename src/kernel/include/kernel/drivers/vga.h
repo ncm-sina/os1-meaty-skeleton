@@ -5,6 +5,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define VGA_WIDTH 80
+#define VGA_HEIGHT 25
+
 // VGA color enum (16 colors for foreground and background)
 typedef enum {
     VGA_COLOR_BLACK = 0,
@@ -25,6 +28,8 @@ typedef enum {
     VGA_COLOR_WHITE = 15
 } VGA_COLORS;
 
+
+
 // Cursor type enum (not used for now)
 typedef enum {
     _NOCURSOR,      // No cursor
@@ -41,7 +46,8 @@ typedef struct {
     uint8_t curx;                 // X-coordinate in current window
     uint8_t cury;                 // Y-coordinate in current window
     uint8_t tabsize;              // Tab size
-} VGAB_TEXTINFO;
+} VGA_TEXTINFO;
+
 
 // VGA memory entry struct
 typedef struct {
@@ -53,6 +59,8 @@ typedef struct {
     uint8_t x;
     uint8_t y;
 } CORDS;
+
+// extern VGA_TEXTINFO vga_textinfo;
 
 // Function prototypes 
 void vga_get_char_at(int16_t x, int16_t y, uint8_t *ch, uint8_t *attrib); // prints ch at x,y with attr attrib

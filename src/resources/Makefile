@@ -44,7 +44,7 @@ LINK_LIST=\
 $(LDFLAGS) \
 $(OBJS) \
 
-.PHONY: all clean install copy-resources  fonts images icons themes locale
+.PHONY: all clean install copy-resources create-folders fonts images icons themes locale
 .SUFFIXES: .o .c .S .asm
 
 all: 16bit-executer/16bit-executer.mod
@@ -74,7 +74,7 @@ clean:
 	rm -f $(OBJS) *.o */*.o */*/*.o
 	rm -f $(OBJS:.o=.d) *.d */*.d */*/*.d
 
-install: copy-resources
+install: create-folders copy-resources
 
 
 fonts:
@@ -93,8 +93,15 @@ locale:
 	mkdir -p $(DESTDIR)$(SHAREDDIR)/locale
 	cp locale/. $(DESTDIR)$(SHAREDDIR)/locale -fr
 
+create-folders:
+	mkdir -p fonts
+	mkdir -p images
+	mkdir -p icons
+	mkdir -p themes
+	mkdir -p locale
 
 copy-resources: fonts images icons themes locale
+
 	mkdir -p $(DESTDIR)$(SHAREDDIR)
 
 -include $(OBJS:.o=.d)

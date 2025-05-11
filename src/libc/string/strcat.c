@@ -1,3 +1,5 @@
+#include <string.h>
+
 char* strcat(char* dest, const char* src) {
     char* ptr = dest; // Save the start of dest for return
     // Move to the end of dest (find null terminator)
