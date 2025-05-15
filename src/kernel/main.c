@@ -61,8 +61,9 @@ static void init_graphics(){
     if((res = vbe_init()) <0){
         if(res2 = vbe_set_text_mode()) printf("5error setting text mode err:%08x err2: %d \n", res2, res2);
         printf("error init graph can't use os : %08x %d", res, res);
-        return;
+        // return;
     }
+
     // vbe_info_block_t tmp_vbe_info;
     // memcpy(&tmp_vbe_info, 0x9000, sizeof(vbe_info_block_t));
     // if(res2 = vbe_set_text_mode()) printf("5error setting text mode err:%08x err2: %d \n", res2, res2);
@@ -165,9 +166,14 @@ static void kernel_init(multiboot_info_t* mbi) {
     enable_fpu();
     load_multiboot_mods(_mbi);
     init_drivers();
-    init_processes();
+    // init_processes();
 
-    // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
+    if(vbe_set_text_mode()) printf("5error setting text mode err\n");
+    serial_init();
+    serial_puts("Hello, Serial Port!\n");
+    serial_printf("Debug: int=%d, str=%s, hex=%x, char=%c\n", 42, "test", 0xdeadbeef, 'A');
+    while(1);
+    // print_module_info(mbi);
     // draw_background(mbi);
     // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
     uint32_t tmpcolor;

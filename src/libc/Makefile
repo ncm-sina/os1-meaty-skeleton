@@ -54,6 +54,7 @@ string/strncpy.o \
 string/strchr.o \
 string/strrchr.o \
 string/snprintf.o \
+serial/serial.o \
 errno.o \
 fcntl.o \
 mman.o \

@@ -179,12 +179,13 @@ multiboot_module_t* get_multiboot_mod_by_name(multiboot_info_t* mbi, const char*
     multiboot_module_t* mods = (multiboot_module_t*)mbi->mods_addr;
     for (uint32_t i = 0; i < mbi->mods_count; i++) {
         if (mods[i].cmdline && strcmp((const char*)mods[i].cmdline, name) == 0) {
-            // printf("Found module: %s at 0x%08x\n", name, mods[i].mod_start);
-            // load_multiboot_mod(&mods[i]);
+            printf("Found module: %s at 0x%08x\n", name, mods[i].mod_start);
+            load_multiboot_mod(&mods[i]);
 
             return &mods[i];
         }
     }
+    return;
     printf("Module %s not found\n", name);
 }
 

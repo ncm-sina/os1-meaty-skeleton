@@ -1,7 +1,5 @@
-# SYSTEM_HEADER_PROJECTS="../src/libc ../src/os-installer"
-# PROJECTS="../src/libc ../src/os-installer/  ../src/modules/ ../src/resources/"
-SYSTEM_HEADER_PROJECTS="../src/libc ../src/os-installer ../src/kernel"
-PROJECTS="../src/libc ../src/os-installer ../src/kernel ../src/modules/ ../src/resources/"
+SYSTEM_HEADER_PROJECTS="../src/libc ../src/kernel"
+PROJECTS="../src/libc  ../src/kernel ../src/modules/ ../src/resources/"
 # PROJECTS="../src/libc ../src/kernel ../src/user"
 
 export MAKE=${MAKE:-make}
