@@ -3,6 +3,7 @@
 #include <kernel/arch/i386/isrs/all.h>
 #include <kernel/drivers/all.h>
 #include <kernel/arch/i386/syscall.h>
+#include <kernel/drivers/ide.h>
 
 #include <stdio.h>
 
@@ -18,7 +19,7 @@ extern void idt_load(uint32_t idt_desc_addr);
 extern void isr_default(void);
 extern void isr0(void), isr1(void), isr2(void), isr3(void), isr4(void), isr5(void),
             isr6(void), isr7(void), isr8(void), isr10(void), isr11(void), isr12(void),
-            isr13(void), isr14(void), isr32(void), isr33(void), isr44(void), isr128(void); // Added isr44
+            isr13(void), isr14(void), isr32(void), isr33(void), isr44(void), isr46(void), isr128(void); // Added isr44
 
 void *isr_stubs[IDT_ENTRIES];
 
@@ -55,6 +56,7 @@ void isr_handler(uint32_t vector, uint32_t error_code) {
             case 32: isr_timer(); break;    // IRQ0: Timer
             case 33: isr_keyboard(); break; // IRQ1: Keyboard
             case 44: isr_mouse(); break;    // IRQ12: Mouse
+            case 46: ide_irq_handler(); break;
             default: printf("Unhandled IRQ: %d\n", vector); break;
         }
         if (vector >= 40)
@@ -91,6 +93,8 @@ void idt_init(void) {
     isr_stubs[32] = isr32; // Timer ISR
     isr_stubs[33] = isr33; // Keyboard ISR
     isr_stubs[44] = isr44; // Mouse ISR
+
+    isr_stubs[46] = isr46; // Mouse ISR
 
     isr_stubs[128] = isr128;
 

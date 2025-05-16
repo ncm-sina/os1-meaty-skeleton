@@ -3,9 +3,13 @@
 #include <kernel/mport.h>
 
 uint32_t timer_ticks = 0;
+uint32_t i=0;
 
 static void timer_handle_tick(void) {
     timer_ticks++;
+    // if(timer_ticks % 10 == 0){
+    //     serial_printf(" %d ", timer_ticks);
+    // }
 }
 
 static void set_tick_hz() { // here we change tick speed from 18.2Hz to 100Hz

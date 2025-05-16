@@ -14,13 +14,19 @@ idt_load:
     .type isr\num, @function
     isr\num:
         pusha
-        .if \has_error == 0
-            pushl $0    # Dummy error code
+        .if \has_error == 1
+            movl 32(%esp), %eax     # Get CPU error code
+            pushl %eax              # Push error code
+        .else
+            pushl $0                # Dummy error code
         .endif
-        pushl $\num     # Vector number
+        pushl $\num                 # Vector number
         call isr_handler
-        addl $8, %esp   # Pop vector and error code
+        addl $8, %esp               # Pop vector and error code
         popa
+        .if \has_error == 1
+            addl $4, %esp           # Remove CPU error code
+        .endif
         iret
 .endm
 
@@ -85,6 +91,6 @@ ISR_STUB 45, 0  # IRQ13: FPU / Coprocessor
 ISR_STUB 46, 0  # IRQ14: Primary IDE
 ISR_STUB 47, 0  # IRQ15: Secondary IDE
 
-ISR_STUB 128, 0  # IRQ15: Secondary IDE
+ISR_STUB 128, 0  # IRQ128: syscall?
 
 # Extend as needed

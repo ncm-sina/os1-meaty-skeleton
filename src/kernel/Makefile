@@ -39,7 +39,11 @@ drivers/keyboard.o \
 drivers/mouse.o \
 drivers/cursor.o \
 drivers/vga.o \
+drivers/ide.o \
+drivers/pci.o \
+drivers/serial.o \
 fs/vfs.o \
+fs/mbr.o \
 fs/syscalls.o \
 mm/vmm.o \
 mm/syscalls.o \
@@ -48,7 +52,6 @@ misc/syscalls.o \
 utils/bmp.o \
 basic_tests.o \
 syscall.o \
-
 
 OBJS=\
 $(ARCHDIR)/crti.o \

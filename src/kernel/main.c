@@ -23,6 +23,8 @@
 #include <kernel/fpu.h>
 #include <kernel/drivers/vga.h>
 #include <kernel/drivers/vbe.h>
+#include <kernel/drivers/ide.h>
+#include <kernel/drivers/serial.h>
 #include <kernel/drivers/all.h>
 
 #include <kernel/utils/bmp.h>
@@ -113,7 +115,10 @@ static void init_graphics(){
 
 static void init_drivers(){
     printf(" init drivers ");
+    idt_init();
+    serial_init();
     timer_drv.init();
+    ide_init();
     keyboard_drv.init();    
     init_graphics();
 }
@@ -154,6 +159,305 @@ static void draw_background(multiboot_info_t* mbi){
     
 }
 
+void test_ide_write(void) {
+    struct block_dev *dev = ide_get_block_dev();
+    if (!dev) {
+        serial_printf("No IDE device\n");
+        return;
+    }
+
+    // Use a high LBA to avoid critical data (adjust based on VHD size)
+    uint32_t lba = 40000; // Safe for a 512MB VHD
+    uint8_t write_buffer[512]={0};
+    uint8_t read_buffer[512]={0};
+    uint8_t original_buffer[512]={0};
+
+    // Initialize write buffer with test pattern
+    for (int i = 0; i < 512; i++) {
+        write_buffer[i] = 0xAA; // Distinct pattern
+    }
+
+    // Read original data to check if sector is unused
+    if (dev->read(lba, original_buffer, 1) != 0) {
+        serial_printf("Failed to read LBA %d\n", lba);
+        return;
+    }
+
+    // Check if sector is unused (e.g., all zeros or random)
+    int is_unused = 1;
+    for (int i = 0; i < 512; i++) {
+        if (original_buffer[i] != 0) {
+            serial_printf(" %d:%x ", i, original_buffer[i]);
+            is_unused = 0; // Sector may contain data
+            // break;
+        }
+    }
+    if (!is_unused) {
+        serial_printf("Warning: LBA %d contains data. Choose another LBA.\n", lba);
+        // return;
+    }
+
+    // Write test data
+    if (dev->write(lba, write_buffer, 1) != 0) {
+        serial_printf("Write to LBA %d failed\n", lba);
+        return;
+    }
+
+    // Read back to verify
+    if (dev->read(lba, read_buffer, 1) != 0) {
+        serial_printf("Read-back from LBA %d failed\n", lba);
+        return;
+    }
+
+    // Verify data
+    int match = 1;
+    for (int i = 0; i < 512; i++) {
+        if (read_buffer[i] != write_buffer[i]) {
+            match = 0;
+            break;
+        }
+    }
+
+    if (match) {
+        serial_printf("Write test passed: LBA %d written and verified\n", lba);
+    } else {
+        serial_printf("Write test failed: Data mismatch at LBA %d\n", lba);
+    }
+
+    // // Optional: Restore original data (if needed)
+    // if (dev->write(lba, original_buffer, 1) != 0) {
+    //     serial_printf("Failed to restore LBA %d\n", lba);
+    // }
+}
+
+void test_mbr_parse(void) {
+    struct block_dev *dev = ide_get_block_dev();
+    if (!dev) {
+        serial_printf("No IDE device\n");
+        return;
+    }
+
+    uint32_t fat32_lba, fat32_size;
+    if (mbr_parse(dev, &fat32_lba, &fat32_size) == 0) {
+        serial_printf("FAT32 partition: LBA %u, Size %u sectors\n", fat32_lba, fat32_size);
+    } else {
+        serial_printf("Failed to parse MBR or find FAT32 partition\n");
+    }
+}
+
+// Test function for serial_printf
+void serial_printf_test(void) {
+    int num1;
+    unsigned int unum1;
+    char *str;
+    void *ptr;
+    char ch;
+
+    // Test 1: Basic %d (positive)
+    num1 = 1000;
+    serial_printf("test 1 - [1000]:[%d]\n", num1);
+
+    // Test 2: Basic %x (hex)
+    num1 = 16;
+    serial_printf("test 2 - [10]:[%x]\n", num1);
+
+    // Test 3: Basic %c
+    ch = 'A';
+    serial_printf("test 3 - [A]:[%c]\n", ch);
+
+    // Test 4: Basic %s
+    str = "hello";
+    serial_printf("test 4 - [hello]:[%s]\n", str);
+
+    // Test 5: Basic %u (unsigned)
+    unum1 = 1234;
+    serial_printf("test 5 - [1234]:[%u]\n", unum1);
+
+    // Test 6: %p (pointer)
+    ptr = (void *)0x12345678;
+    serial_printf("test 6 - [0x12345678]:[%p]\n", ptr);
+
+    // Test 7: %d (negative)
+    num1 = -500;
+    serial_printf("test 7 - [-500]:[%d]\n", num1);
+
+    // Test 8: %x with # flag
+    num1 = 255;
+    serial_printf("test 8 - [0xff]:[%#x]\n", num1);
+
+    // Test 9: %08x (zero-padded)
+    num1 = 0x7b;
+    serial_printf("test 9 - [0000007b]:[%08x]\n", num1);
+
+    // Test 10: %8d (space-padded)
+    num1 = 123;
+    serial_printf("test 10 - [     123]:[%8d]\n", num1);
+
+    // Test 11: %s with null string
+    str = NULL;
+    serial_printf("test 11 - [(null)]:[%s]\n", str);
+
+    // Test 12: %% (literal %)
+    serial_printf("test 12 - [%]:[%%]\n");
+
+    // Test 13: %d with zero
+    num1 = 0;
+    serial_printf("test 13 - [0]:[%d]\n", num1);
+
+    // Test 14: %x with zero
+    num1 = 0;
+    serial_printf("test 14 - [0]:[%x]\n", num1);
+
+    // Test 15: %u with zero
+    unum1 = 0;
+    serial_printf("test 15 - [0]:[%u]\n", unum1);
+
+    // Test 16: %c with null char
+    ch = '\0';
+    serial_printf("test 16 - []:[%c]\n", ch);
+
+    // Test 17: %s with empty string
+    str = "";
+    serial_printf("test 17 - []:[%s]\n", str);
+
+    // Test 18: %p with null pointer
+    ptr = NULL;
+    serial_printf("test 18 - [0x00000000]:[%p]\n", ptr);
+
+    // Test 19: %08x with # flag
+    num1 = 0xabc;
+    serial_printf("test 19 - [0x0000abc]:[%#08x]\n", num1);
+
+    // Test 20: %10s (space-padded)
+    str = "test";
+    serial_printf("test 20 - [      test]:[%10s]\n", str);
+
+    // Test 21: %.5s (precision)
+    str = "longstring";
+    serial_printf("test 21 - [longs]:[%.5s]\n", str);
+
+    // Test 22: %10.5s (width and precision)
+    str = "hello";
+    serial_printf("test 22 - [     hello]:[%10.5s]\n", str);
+
+    // Test 23: %d with large number
+    num1 = 2147483647;
+    serial_printf("test 23 - [2147483647]:[%d]\n", num1);
+
+    // Test 24: %d with min int
+    num1 = -2147483648;
+    serial_printf("test 24 - [-2147483648]:[%d]\n", num1);
+
+    // Test 25: %u with max unsigned
+    unum1 = 4294967295U;
+    serial_printf("test 25 - [4294967295]:[%u]\n", unum1);
+
+    // Test 26: %x with large hex
+    num1 = 0xffffffff;
+    serial_printf("test 26 - [ffffffff]:[%x]\n", num1);
+
+    // Test 27: %x with # flag
+    num1 = 0xffffffff;
+    serial_printf("test 27 - [0xffffffff]:[%#x]\n", num1);
+
+    // Test 28: %p with large address
+    ptr = (void *)0xdeadbeef;
+    serial_printf("test 28 - [0xdeadbeef]:[%p]\n", ptr);
+
+    // Test 29: %8d with negative
+    num1 = -123;
+    serial_printf("test 29 - [    -123]:[%8d]\n", num1);
+
+    // Test 30: %08d with negative
+    num1 = -123;
+    serial_printf("test 30 - [-0000123]:[%08d]\n", num1);
+
+    // Test 31: %x with small value
+    num1 = 1;
+    serial_printf("test 31 - [1]:[%x]\n", num1);
+
+    // Test 32: %c with special char
+    ch = '\n';
+    serial_printf("test 32 - [\n]:[%c]\n", ch);
+
+    // Test 33: %s with spaces
+    str = "hello world";
+    serial_printf("test 33 - [hello world]:[%s]\n", str);
+
+    // Test 34: %12s with short string
+    str = "hi";
+    serial_printf("test 34 - [          hi]:[%12s]\n", str);
+
+    // Test 35: %.2s with long string
+    str = "abcdef";
+    serial_printf("test 35 - [ab]:[%.2s]\n", str);
+
+    // Test 36: %x with # and width
+    num1 = 0x123;
+    serial_printf("test 36 - [   0x123]:[%#8x]\n", num1);
+
+    // Test 37: %d with multiple digits
+    num1 = 987654;
+    serial_printf("test 37 - [987654]:[%d]\n", num1);
+
+    // Test 38: %u with small value
+    unum1 = 5;
+    serial_printf("test 38 - [5]:[%u]\n", unum1);
+
+    // Test 39: %p with zero-padded width
+    ptr = (void *)0xabc;
+    serial_printf("test 39 - [  0x00000abc]:[%12p]\n", ptr);
+
+    // Test 40: %s with special characters
+    str = "test\n\t";
+    serial_printf("test 40 - [test\n\t]:[%s]\n", str);
+
+    // Test 41: %d with width and zero
+    num1 = 0;
+    serial_printf("test 41 - [00000000]:[%08d]\n", num1);
+
+    // Test 42: Invalid specifier
+    num1 = 42;
+    serial_printf("test 42 - [%z42]:[%z42]\n", num1);
+
+    // Test 43: Multiple specifiers
+    num1 = 100;
+    str = "multi";
+    ch = 'X';
+    serial_printf("test 43 - [100 multi X]:[%d %s %c]\n", num1, str, ch);
+
+    // Test 44: %u with width
+    unum1 = 456;
+    serial_printf("test 44 - [   456]:[%6u]\n", unum1);
+
+    // Test 45: %x with zero and # flag
+    num1 = 0;
+    serial_printf("test 45 - [0x0]:[%#x]\n", num1);
+
+    // Test 46: %s with precision and null
+    str = NULL;
+    serial_printf("test 46 - [(nu]:[%.3s]\n", str);
+
+    // Test 47: %p with small address
+    ptr = (void *)0x1;
+    serial_printf("test 47 - [0x00000001]:[%p]\n", ptr);
+
+    // Test 48: %d with large width
+    num1 = 99;
+    serial_printf("test 48 - [          99]:[%12d]\n", num1);
+
+    // Test 49: %x with uppercase hex (lowercase expected)
+    num1 = 0xABC;
+    serial_printf("test 49 - [abc]:[%x]\n", num1);
+
+    // Test 50: Complex combination
+    num1 = -42;
+    unum1 = 0x1ff;
+    str = "end";
+    ptr = (void *)0x1234;
+    serial_printf("test 50 - [-42 0x1ff end 0x00001234]:[%d %#x %s %p]\n", num1, unum1, str, ptr);
+}
+
 // Kernel initialization
 static void kernel_init(multiboot_info_t* mbi) {
     _mbi = mbi;
@@ -162,16 +466,24 @@ static void kernel_init(multiboot_info_t* mbi) {
     // init_gdt();
     init_paging_stage2(_mbi);
     // Initialize IDT (sets up exceptions and IRQs)
-    idt_init();
     enable_fpu();
     load_multiboot_mods(_mbi);
     init_drivers();
     // init_processes();
 
-    if(vbe_set_text_mode()) printf("5error setting text mode err\n");
-    serial_init();
+    // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
     serial_puts("Hello, Serial Port!\n");
-    serial_printf("Debug: int=%d, str=%s, hex=%x, char=%c\n", 42, "test", 0xdeadbeef, 'A');
+    // test_ide_write();
+    test_mbr_parse();
+    // serial_printf_test();
+    // serial_printf("Debug: int=%d, str=%s, hex=%x, char=%c\n", 42, "test", 0xdeadbeef, 'A');
+    // struct block_dev *dev = ide_get_block_dev();
+    // serial_printf(" 1 ");
+    // uint8_t buffer[512];
+    // dev->read(0, buffer, 1);
+    // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
+    // printf("MBR: %02x %02x\n", buffer[510], buffer[511]);    
+    // serial_printf("MBR: %x %x\n", buffer[510], buffer[511]);
     while(1);
     // print_module_info(mbi);
     // draw_background(mbi);
