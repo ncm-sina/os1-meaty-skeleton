@@ -42,6 +42,8 @@ drivers/vga.o \
 drivers/ide.o \
 drivers/pci.o \
 drivers/serial.o \
+fs/fat32.o \
+fs/unicode.o \
 fs/vfs.o \
 fs/mbr.o \
 fs/syscalls.o \
@@ -50,6 +52,7 @@ mm/syscalls.o \
 process/syscalls.o \
 misc/syscalls.o \
 utils/bmp.o \
+utils/kmem.o \
 basic_tests.o \
 syscall.o \
 

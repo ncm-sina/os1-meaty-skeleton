@@ -6,7 +6,7 @@
 static uint16_t ide_base = IDE_PRIMARY_BASE;
 static uint16_t ide_control = IDE_PRIMARY_CONTROL;
 static volatile int ide_irq_fired = 0;
-static struct block_dev ide_dev;
+static block_dev_t ide_dev;
 
 // Wait for IDE to be ready (BSY=0)
 static void ide_wait_ready(void) {
@@ -27,13 +27,13 @@ static int ide_wait_drq(void) {
 }
 
 // Select drive (master)
-static void ide_select_drive(void) {
+void ide_select_drive(void) {
     outb(ide_base + IDE_REG_DRIVE_HEAD, IDE_DRIVE_MASTER);
     ide_wait_ready();
 }
 
 // Identify drive
-static int ide_identify(uint8_t *buffer) {
+int ide_identify(uint8_t *buffer) {
     ide_select_drive();
     outb(ide_base + IDE_REG_SECTOR_COUNT, 0);
     outb(ide_base + IDE_REG_LBA_LOW, 0);
@@ -48,7 +48,7 @@ static int ide_identify(uint8_t *buffer) {
 }
 
 // Read sectors (PIO, interrupt-driven)
-static int ide_read_sectors(uint32_t lba, uint8_t *buffer, uint32_t count) {
+int ide_read_sectors(uint32_t lba, uint8_t *buffer, uint32_t count) {
     if (!count) return -1;
 
     ide_select_drive();
@@ -78,7 +78,7 @@ static int ide_read_sectors(uint32_t lba, uint8_t *buffer, uint32_t count) {
 }
 
 // Write sectors (PIO, interrupt-driven)
-static int ide_write_sectors(uint32_t lba, const uint8_t *buffer, uint32_t count) {
+int ide_write_sectors(uint32_t lba, const uint8_t *buffer, uint32_t count) {
     if (!count) return -1;
 
     ide_select_drive();
@@ -114,11 +114,11 @@ void ide_irq_handler(void) {
 }
 
 // Block device interface
-static int block_read(uint32_t lba, uint8_t *buffer, uint32_t count) {
+int block_read(uint32_t lba, uint8_t *buffer, uint32_t count) {
     return ide_read_sectors(lba, buffer, count);
 }
 
-static int block_write(uint32_t lba, const uint8_t *buffer, uint32_t count) {
+int block_write(uint32_t lba, const uint8_t *buffer, uint32_t count) {
     return ide_write_sectors(lba, buffer, count);
 }
 
@@ -155,10 +155,10 @@ void ide_init(void) {
     outb(0xA1, mask & ~(1 << (14 - 8))); // Unmask IRQ14
 
     // Initialize block device
-    ide_dev.read = block_read;
-    ide_dev.write = block_write;
+    ide_dev.read_sectors = block_read;
+    ide_dev.write_sectors = block_write;
 }
 
-struct block_dev *ide_get_block_dev(void) {
+block_dev_t *ide_get_block_dev(void) {
     return &ide_dev;
 }

@@ -22,6 +22,6 @@ struct mbr {
 } __attribute__((packed));
 
 // Function to parse MBR and find FAT32 partition
-int mbr_parse(struct block_dev *dev, uint32_t *fat32_lba, uint32_t *fat32_size);
+int mbr_parse(block_dev_t *dev, uint32_t *fat32_lba, uint32_t *fat32_size);
 
 #endif

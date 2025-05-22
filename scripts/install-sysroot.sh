@@ -1,4 +1,4 @@
 #!/bin/sh
 set -e
 
-powershell ./install-sysroot-to-osdisk.ps1
+powershell ./ps-install-sysroot.ps1

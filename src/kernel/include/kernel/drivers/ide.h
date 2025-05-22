@@ -34,14 +34,14 @@
 #define IDE_PRIMARY_CONTROL 0x3F6
 
 // Block device structure
-struct block_dev {
-    int (*read)(uint32_t lba, uint8_t *buffer, uint32_t count);
-    int (*write)(uint32_t lba, const uint8_t *buffer, uint32_t count);
-};
+typedef struct {
+    int (*read_sectors)(uint32_t lba, uint8_t *buffer, uint32_t count);
+    int (*write_sectors)(uint32_t lba, const uint8_t *buffer, uint32_t count);
+}__attribute__((packed)) block_dev_t;
 
 // Function prototypes
 void ide_init(void);
-struct block_dev *ide_get_block_dev(void);
+block_dev_t *ide_get_block_dev(void);
 void ide_irq_handler(void);
 
 #endif

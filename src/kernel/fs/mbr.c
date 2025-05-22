@@ -2,12 +2,12 @@
 #include <stdio.h>
 
 // Parse MBR and find FAT32 partition
-int mbr_parse(struct block_dev *dev, uint32_t *fat32_lba, uint32_t *fat32_size) {
+int mbr_parse(block_dev_t *dev, uint32_t *fat32_lba, uint32_t *fat32_size) {
     uint8_t buffer[512];
     struct mbr *mbr = (struct mbr *)buffer;
 
     // Read MBR (LBA 0)
-    if (dev->read(0, buffer, 1) != 0) {
+    if (dev->read_sectors(0, buffer, 1) != 0) {
         serial_printf("Failed to read MBR\n");
         return -1;
     }
@@ -28,11 +28,16 @@ int mbr_parse(struct block_dev *dev, uint32_t *fat32_lba, uint32_t *fat32_size) 
         }
 
         // Check for FAT32 (0x0B or 0x0C)
-        if (part->type == 0x0B || part->type == 0x0C) {
+        if (part->type == 0x0B /*|| part->type == 0x0C*/) {
             *fat32_lba = part->first_lba;
             *fat32_size = part->sector_count;
-            serial_printf("FAT32 partition found at LBA %u, size %u sectors\n", *fat32_lba, *fat32_size);
+            serial_printf("FAT32 0xb partition found at LBA %u, size %u sectors\n", *fat32_lba, *fat32_size);
             return 0;
+        }else if(part->type == 0x0C){
+            *fat32_lba = part->first_lba;
+            *fat32_size = part->sector_count;
+            serial_printf("FAT32 0xc partition found at LBA %u, size %u sectors\n", *fat32_lba, *fat32_size);
+            return 0;            
         }
 
         // Warn about extended partitions

@@ -27,8 +27,10 @@ struct stat {
     off_t  st_size;    /* File size */
     uid_t  st_uid;     /* Owner UID */
     gid_t  st_gid;     /* Owner GID */
+    uint32_t st_mtime;   // Modification time
     /* Add more fields as needed */
 };
+
 
 /* For writev */
 struct iovec {
@@ -96,6 +98,51 @@ struct superblock {
     void *s_private;        /* File-system-specific data */
     const struct fs_ops *s_ops; /* File system operations */
 };
+
+// POSIX types
+// typedef int mode_t;
+// typedef long off_t;
+
+// struct stat {
+//     uint32_t st_ino;     // Inode (cluster for FAT32)
+//     mode_t st_mode;      // File type, permissions
+//     uint32_t st_size;    // Size in bytes
+//     uint32_t st_mtime;   // Modification time
+// };
+
+struct dirent {
+    uint32_t d_ino;      // Inode (cluster)
+    char d_name[256];    // File name
+    uint8_t d_type;      // DT_DIR, DT_REG
+};
+
+struct vfs_dir {
+    struct vfs_node *node; // Directory node
+    size_t index;          // Current entry index
+    void *private_data;    // FS-specific iterator
+};
+
+// File operations
+struct file_operations {
+    int (*open)(struct vfs_node *node, int flags, mode_t mode);
+    int (*read)(struct vfs_node *node, void *buf, size_t count, off_t offset);
+    int (*write)(struct vfs_node *node, const void *buf, size_t count, off_t offset);
+    int (*readdir)(struct vfs_node *node, struct dirent *entry, size_t *index);
+    int (*close)(struct vfs_node *node);
+    int (*unlink)(struct vfs_node *node);
+    int (*stat)(struct vfs_node *node, struct stat *statbuf);
+    int (*access)(struct vfs_node *node, int mode);
+};
+
+// VFS node
+struct vfs_node {
+    char name[256];              // Node name
+    uint32_t cluster;            // FAT32 cluster
+    uint8_t type;                // VFS_FILE, VFS_DIR
+    struct file_operations *ops;  // Operations
+    void *private_data;          // FS-specific (fat32_fs)
+};
+
 
 /* File system operations */
 struct fs_ops {

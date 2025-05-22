@@ -1,11 +1,12 @@
-// TODO: Implement kmem
-#ifndef KERNEL_FPU_H
-#define KERNEL_FPU_H
+#ifndef KMEM_H
+#define KMEM_H
 
+#include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
-void* kmalloc(size_t size);
+void init_heap(uint32_t heap_start_addr);
+void* kmalloc(uint32_t size);
 void kfree(void* ptr);
-void heap_init(void);
 
-#endif
+#endif // MEMORY_H

@@ -26,6 +26,8 @@
 #include <kernel/drivers/ide.h>
 #include <kernel/drivers/serial.h>
 #include <kernel/drivers/all.h>
+#include <kernel/fs/fat32.h>
+#include <kernel/fs/vfs.h>
 
 #include <kernel/utils/bmp.h>
 
@@ -61,8 +63,8 @@ static void init_graphics(){
     // }
     // while(1);
     if((res = vbe_init()) <0){
-        if(res2 = vbe_set_text_mode()) printf("5error setting text mode err:%08x err2: %d \n", res2, res2);
-        printf("error init graph can't use os : %08x %d", res, res);
+        if(res2 = vbe_set_text_mode()) serial_printf("5error setting text mode err:%08x err2: %d \n", res2, res2);
+        serial_printf("error init graph can't use os : %08x %d", res, res);
         // return;
     }
 
@@ -114,7 +116,7 @@ static void init_graphics(){
 }
 
 static void init_drivers(){
-    printf(" init drivers ");
+    serial_printf(" init drivers\n");
     idt_init();
     serial_init();
     timer_drv.init();
@@ -160,7 +162,7 @@ static void draw_background(multiboot_info_t* mbi){
 }
 
 void test_ide_write(void) {
-    struct block_dev *dev = ide_get_block_dev();
+    block_dev_t *dev = ide_get_block_dev();
     if (!dev) {
         serial_printf("No IDE device\n");
         return;
@@ -178,7 +180,7 @@ void test_ide_write(void) {
     }
 
     // Read original data to check if sector is unused
-    if (dev->read(lba, original_buffer, 1) != 0) {
+    if (dev->read_sectors(lba, original_buffer, 1) != 0) {
         serial_printf("Failed to read LBA %d\n", lba);
         return;
     }
@@ -198,13 +200,13 @@ void test_ide_write(void) {
     }
 
     // Write test data
-    if (dev->write(lba, write_buffer, 1) != 0) {
+    if (dev->write_sectors(lba, write_buffer, 1) != 0) {
         serial_printf("Write to LBA %d failed\n", lba);
         return;
     }
 
     // Read back to verify
-    if (dev->read(lba, read_buffer, 1) != 0) {
+    if (dev->read_sectors(lba, read_buffer, 1) != 0) {
         serial_printf("Read-back from LBA %d failed\n", lba);
         return;
     }
@@ -225,25 +227,30 @@ void test_ide_write(void) {
     }
 
     // // Optional: Restore original data (if needed)
-    // if (dev->write(lba, original_buffer, 1) != 0) {
+    // if (dev->write_sectors(lba, original_buffer, 1) != 0) {
     //     serial_printf("Failed to restore LBA %d\n", lba);
     // }
 }
 
-void test_mbr_parse(void) {
-    struct block_dev *dev = ide_get_block_dev();
-    if (!dev) {
-        serial_printf("No IDE device\n");
-        return;
-    }
-
-    uint32_t fat32_lba, fat32_size;
-    if (mbr_parse(dev, &fat32_lba, &fat32_size) == 0) {
-        serial_printf("FAT32 partition: LBA %u, Size %u sectors\n", fat32_lba, fat32_size);
-    } else {
-        serial_printf("Failed to parse MBR or find FAT32 partition\n");
-    }
-}
+// void test_mbr_parse(void) {
+//     block_dev_t *dev = ide_get_block_dev();
+//     if (!dev) {
+//         serial_printf("No IDE device\n");
+//         return;
+//     }
+//     uint32_t fat32_lba, fat32_size;
+//     if (mbr_parse(dev, &fat32_lba, &fat32_size) == 0) {
+//         serial_printf("FAT32 partition: LBA %u, Size %u sectors\n", fat32_lba, fat32_size);
+//         // Initialize FAT32
+//         fat32_fs_t fs;
+//         if (fat32_init(&fs, fat32_lba) == 0) {
+//             serial_printf("Listing root directory:\n");
+//             fat32_list_dir(&fs, fs.bpb.root_cluster);
+//         }
+//     } else {
+//         serial_printf("Failed to parse MBR or find FAT32 partition\n");
+//     }
+// }
 
 // Test function for serial_printf
 void serial_printf_test(void) {
@@ -458,6 +465,61 @@ void serial_printf_test(void) {
     serial_printf("test 50 - [-42 0x1ff end 0x00001234]:[%d %#x %s %p]\n", num1, unum1, str, ptr);
 }
 
+// void dir_list_test(){
+//     int fd = open("/", O_RDONLY, 0);
+//     if (fd < 0) {
+//         printf("Failed to open /\n");
+//         return 1;
+//     }
+
+//     struct dirent entry;
+//     while (readdir(fd, &entry) > 0) {
+//         printf("%s: %s\n", entry.d_type == DT_DIR ? "DIR" : "FILE", entry.d_name);
+//     }
+
+//     close(fd);    
+// }
+
+int fs_init(void) {
+    struct block_dev *dev = ide_get_block_dev();
+    if (!dev) return -EIO;
+    uint32_t lba, size;
+    if (mbr_parse(dev, &lba, &size) == 0) {
+        static fat32_fs_t fs;
+        if (fat32_init(&fs, lba) == 0 && fat32_mount(&fs) == 0) {
+            return 0;
+        }
+    }
+    // Try ext2, etc.
+    return -ENOENT;
+}
+
+void test_filesystem(){
+    // serial_init();
+    // ide_init();
+    serial_printf("test filesystem:\n");
+
+    // Kernel-space ls test
+    struct vfs_dir *dir;
+    // dir = vfs_opendir("/usr");
+    // if (!dir) {
+    //     serial_printf("opendir /usr failed\n");
+    //     return;
+    // }
+    dir = vfs_opendir("/");
+    if (!dir) {
+        serial_printf("opendir / failed\n");
+        return;
+    }
+
+    serial_printf(" zz vfs_index:%d, dir_name:%s ", dir->index, dir->node->name);
+    struct dirent entry;
+    while (vfs_readdir(dir, &entry) > 0) {
+        serial_printf("%s: %s\n", entry.d_type == DT_DIR ? "DIR" : "FILE", entry.d_name);
+    }
+    vfs_closedir(dir);    
+}
+
 // Kernel initialization
 static void kernel_init(multiboot_info_t* mbi) {
     _mbi = mbi;
@@ -466,21 +528,37 @@ static void kernel_init(multiboot_info_t* mbi) {
     // init_gdt();
     init_paging_stage2(_mbi);
     // Initialize IDT (sets up exceptions and IRQs)
+    init_heap(0); // the parameter is heap_start which is ignored based on current implementation
     enable_fpu();
     load_multiboot_mods(_mbi);
     init_drivers();
+
+    if (vfs_init() != 0) {
+        serial_printf("VFS init failed\n");
+        return;
+    }
+
+    if (fs_init() != 0) {
+        serial_printf("Filesystem init failed\n");
+        return;
+    }
+
+
+    test_filesystem();
+
     // init_processes();
 
     // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
-    serial_puts("Hello, Serial Port!\n");
+    // serial_puts("Hello, Serial Port!\n");
     // test_ide_write();
-    test_mbr_parse();
+    // test_mbr_parse();
+    // dir_list_test();
     // serial_printf_test();
     // serial_printf("Debug: int=%d, str=%s, hex=%x, char=%c\n", 42, "test", 0xdeadbeef, 'A');
-    // struct block_dev *dev = ide_get_block_dev();
+    // block_dev_t *dev = ide_get_block_dev();
     // serial_printf(" 1 ");
     // uint8_t buffer[512];
-    // dev->read(0, buffer, 1);
+    // dev->read_sectors(0, buffer, 1);
     // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
     // printf("MBR: %02x %02x\n", buffer[510], buffer[511]);    
     // serial_printf("MBR: %x %x\n", buffer[510], buffer[511]);

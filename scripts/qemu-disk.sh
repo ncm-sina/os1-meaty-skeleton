@@ -8,8 +8,8 @@ qemu-system-i386 \
 -vga std \
 -drive file=../os-disk.vhd,format=vpc \
 -m 128M \
--accel tcg \
 -serial stdio \
+-accel whpx \
 -s -S
 # -hda ../os-disk.vhd \
 # -cdrom ../os1.iso \
