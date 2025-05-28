@@ -75,7 +75,7 @@ void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
     idt[num].type_attr = flags;
 }
 
-void idt_init(void) {
+int idt_init(void) {
     isr_stubs[0] = isr0;
     isr_stubs[1] = isr1;
     isr_stubs[2] = isr2;
@@ -108,4 +108,5 @@ void idt_init(void) {
     pic_remap();
     idt_load((uint32_t)&idt_desc);
     asm volatile("sti"); // Enable interrupts
+    return 0;
 }

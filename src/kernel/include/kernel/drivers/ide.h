@@ -40,7 +40,7 @@ typedef struct {
 }__attribute__((packed)) block_dev_t;
 
 // Function prototypes
-void ide_init(void);
+int ide_init(void);
 block_dev_t *ide_get_block_dev(void);
 void ide_irq_handler(void);
 

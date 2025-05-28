@@ -72,7 +72,8 @@ void print_vbe_mode_info(vbe_mode_info_t *mode);
 
 int vbe_list_supported_modes(void);
 int32_t vbe_init(void);
-uint32_t vbe_set_mode(uint16_t width, uint16_t height, uint8_t bpp);
+uint32_t vbe_set_mode(uint16_t mode);
+uint32_t vbe_set_mode2(uint16_t width, uint16_t height, uint8_t bpp);
 uint32_t vbe_get_mode_info(uint16_t mode, vbe_mode_info_t * info);
 int vbe_clear_screen(uint32_t color/*, vbe_mode_info_t *mode_info*/);
 int vbe_set_text_mode(void);

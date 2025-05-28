@@ -67,7 +67,7 @@ struct key_event {
 
 // Keyboard driver interface
 struct keyboard_driver {
-    void (*init)(void);                  // Initialize driver and register with ISR
+    int (*init)(void);                  // Initialize driver and register with ISR
     int (*get_event)(struct key_event *event); // Get next key event from buffer
     uint8_t (*get_modifiers)(void);      // Get current modifier state
     char (*keycode_to_ascii)(enum keycode code, uint8_t modifiers); // Convert keycode to ASCII

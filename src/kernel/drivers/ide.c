@@ -123,7 +123,7 @@ int block_write(uint32_t lba, const uint8_t *buffer, uint32_t count) {
 }
 
 // Initialize IDE driver
-void ide_init(void) {
+int ide_init(void) {
     // Check PCI for IDE controller
     struct pci_dev *ide_pci = pci_find_device(0x01, 0x01);
     if (ide_pci) {
@@ -146,7 +146,7 @@ void ide_init(void) {
     // Identify drive
     uint8_t identify_data[512];
     if (ide_identify(identify_data)) {
-        return;
+        return -1;
     }
 
     // IDE IRQ14 is handled by vector 46 in isr_handler
@@ -157,6 +157,8 @@ void ide_init(void) {
     // Initialize block device
     ide_dev.read_sectors = block_read;
     ide_dev.write_sectors = block_write;
+
+    return 0;
 }
 
 block_dev_t *ide_get_block_dev(void) {

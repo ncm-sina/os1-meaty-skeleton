@@ -1,5 +1,5 @@
 #include <stdarg.h>
-#include <kernel/drivers/serial.h>
+#include "serial.h"
 
 // I/O port definitions for COM1
 #define COM1_PORT 0x3F8

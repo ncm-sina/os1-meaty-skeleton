@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 struct timer_driver {
-    void (*init)(void);
+    int (*init)(void);
     uint32_t (*get_ticks)(void);
 };
 

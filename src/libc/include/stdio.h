@@ -4,6 +4,7 @@
 #include <sys/cdefs.h>
 #include <stdarg.h>
 #include <sys/types.h>
+#include <kernel/drivers/vga.h>
 
 
 #define EOF (-1)

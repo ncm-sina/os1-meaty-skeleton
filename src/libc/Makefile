@@ -61,6 +61,7 @@ signal.o \
 unistd.o \
 
 HOSTEDOBJS=\
+$(CRTX) \
 $(ARCH_HOSTEDOBJS) \
 
 OBJS=\
@@ -70,12 +71,14 @@ $(HOSTEDOBJS) \
 LIBK_OBJS=$(FREEOBJS:.o=.libk.o)
 
 #BINARIES=libc.a libk.a # Not ready for libc yet.
-BINARIES=libk.a
+BINARIES=libk.a libc.a
+CRTX=$(ARCHDIR)/crt0.o $(ARCHDIR)/crti.o $(ARCHDIR)/crtn.o $(ARCHDIR)/crtbegin.o $(ARCHDIR)/crtend.o
+# CRTX=$(ARCHDIR)/crti.o $(ARCHDIR)/crtn.o $(ARCHDIR)/crtbegin.o $(ARCHDIR)/crtend.o
 
 .PHONY: all clean install install-headers install-libs
-.SUFFIXES: .o .libk.o .c .S
+.SUFFIXES: .o .libk.o .libc.o .c .S
 
-all: $(BINARIES)
+all: $(BINARIES) $(CRTX)
 
 libc.a: $(OBJS)
 	$(AR) rcs $@ $(OBJS)
@@ -86,8 +89,12 @@ libk.a: $(LIBK_OBJS)
 .c.o:
 	$(CC) -MD -c $< -o $@ -std=gnu11 $(CFLAGS) $(CPPFLAGS)
 
-.c.S:
+# .c.S:
+# 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
+
+.S.o:
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
+
 
 .c.libk.o:
 	$(CC) -MD -c $< -o $@ -std=gnu11 $(LIBK_CFLAGS) $(LIBK_CPPFLAGS)
@@ -95,8 +102,15 @@ libk.a: $(LIBK_OBJS)
 .S.libk.o:
 	$(CC) -MD -c $< -o $@ $(LIBK_CFLAGS) $(LIBK_CPPFLAGS)
 
+$(ARCHDIR)/crtbegin.o $(ARCHDIR)/crtend.o:
+	OBJ="../../../../../../../i686-elf-tools-windows/lib/gcc/i686-elf/7.1.0/$(@F)" && cp "$$OBJ" $@
+
+# $(ARCHDIR)/crt0.o:
+# 	touch $(ARCHDIR)/crt0.o
+
 clean:
 	rm -f $(BINARIES) *.a
+	rm -f $(CRTX)
 	rm -f $(OBJS) $(LIBK_OBJS) *.o */*.o */*/*.o
 	rm -f $(OBJS:.o=.d) $(LIBK_OBJS:.o=.d) *.d */*.d */*/*.d
 
@@ -104,13 +118,13 @@ install: install-headers install-libs
 
 install-headers:
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
-	cp -R --preserve=timestamps include/. $(DESTDIR)$(INCLUDEDIR)/.
+	cp -R --preserve=timestamps include/. $(DESTDIR)$(INCLUDEDIR)/.	
 
-	
-
-install-libs: $(BINARIES)
+install-libs: $(BINARIES) $(CRTX)
 	mkdir -p $(DESTDIR)$(LIBDIR)
+	mkdir -p $(DESTDIR)$(LIBDIR)/crt
 	cp $(BINARIES) $(DESTDIR)$(LIBDIR)
+	cp $(CRTX) $(DESTDIR)$(LIBDIR)/crt
 
 -include $(OBJS:.o=.d)
 -include $(LIBK_OBJS:.o=.d)

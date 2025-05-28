@@ -107,28 +107,28 @@ uint8_t vbe_run_bin[VBE_RUN_SIZE] = {
 };
 
 void print_vbe_info_block(vbe_info_block_t *info) {
-    printf("VBE Info Block:\n");
-    printf("Signature: %.4s\n", info->signature);
-    printf("Version: %u.%u\n", info->version >> 8, info->version & 0xFF);
-    printf("Total Memory: %u MB\n", info->total_memory * 64 / 1024);
-    printf("Capabilities: 0x%08X\n", info->capabilities);
-    printf("Video Modes Ptr: 0x%08X\n", info->video_modes);
-    printf("OEM String Ptr: 0x%08X\n", info->oem_string);
-    printf("Vendor Ptr: 0x%08X\n", info->vendor);
-    printf("Product Name Ptr: 0x%08X\n", info->product_name);
+    serial_printf("VBE Info Block:\n");
+    serial_printf("Signature: %.4s\n", info->signature);
+    serial_printf("Version: %u.%u\n", info->version >> 8, info->version & 0xFF);
+    serial_printf("Total Memory: %u MB\n", info->total_memory * 64 / 1024);
+    serial_printf("Capabilities: 0x%08x\n", info->capabilities);
+    serial_printf("Video Modes Ptr: 0x%08x\n", info->video_modes);
+    serial_printf("OEM String Ptr: 0x%08x\n", info->oem_string);
+    serial_printf("Vendor Ptr: 0x%08x\n", info->vendor);
+    serial_printf("Product Name Ptr: 0x%08x\n", info->product_name);
 }
 
 void print_vbe_mode_info(vbe_mode_info_t *mode) {
-    printf("VBE Mode Info:\n");
-    printf("Resolution: %ux%u\n", mode->width, mode->height);
-    printf("BPP: %d\n", mode->bpp);
-    printf("Pitch: %u\n", mode->pitch);
-    printf("Framebuffer: 0x%08X\n", mode->framebuffer);
-    printf("Memory Model: 0x%02X\n", mode->memory_model);
-    printf("Attributes: 0x%04X\n", mode->attributes);
-    printf("Red Mask: %u (Pos: %u)\n", mode->red_mask, mode->red_position);
-    printf("Green Mask: %u (Pos: %u)\n", mode->green_mask, mode->green_position);
-    printf("Blue Mask: %u (Pos: %u)\n", mode->blue_mask, mode->blue_position);
+    serial_printf("VBE Mode Info:\n");
+    serial_printf("Resolution: %ux%u\n", mode->width, mode->height);
+    serial_printf("BPP: %d\n", mode->bpp);
+    serial_printf("Pitch: %u\n", mode->pitch);
+    serial_printf("Framebuffer: 0x%08x\n", mode->framebuffer);
+    serial_printf("Memory Model: 0x%02x\n", mode->memory_model);
+    serial_printf("Attributes: 0x%04x\n", mode->attributes);
+    serial_printf("Red Mask: %u (Pos: %u)\n", mode->red_mask, mode->red_position);
+    serial_printf("Green Mask: %u (Pos: %u)\n", mode->green_mask, mode->green_position);
+    serial_printf("Blue Mask: %u (Pos: %u)\n", mode->blue_mask, mode->blue_position);
 }
 
 static uint32_t vbe_bios_call(vbe_bios_call_t *bc){
@@ -195,6 +195,7 @@ int32_t vbe_init(void) {
 
     if (!(_mbi->flags & (1 << 12))) return -5;
     framebuffer_addr = _mbi->framebuffer_addr; // Physical address
+    serial_printf("framebuffer_addr1: %x", framebuffer_addr);
     // *mode_info = (vbe_mode_info_t) _mbi->vbe_mode_info;
     // *vbe_info =  (vbe_info_block_t) _mbi->vbe_control_info;
     // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
@@ -206,9 +207,36 @@ int32_t vbe_init(void) {
     return 0;
 }
 
+uint32_t vbe_set_mode(uint16_t mode) {
+    // mode = mode | 0x4000;
+    vbe_bios_call_t bc = {
+        .ax = 0x4F02,
+        .bx = mode
+    };
+    uint32_t res = vbe_bios_call(&bc);
+    if (res != 0x004F) return -1;
+
+    // Get mode info to verify framebuffer
+    bc.ax = 0x4F01;
+    bc.cx = mode & 0x1FFF; // Clear LFB bit
+    bc.es = 0x0920;
+    bc.di = 0x0000;
+    // bc.es = (VBE_MINFO >> 16) << 12 ;
+    // bc.di = VBE_MINFO & 0xFFFF;
+    if (vbe_bios_call(&bc) != 0x004F) return -2;
+
+    if (!(_mbi->flags & (1 << 12))) return -3;
+    // print_vbe_mode_info(mode_info);
+    framebuffer_addr = mode_info->framebuffer; // Physical address
+    serial_printf("framebuffer_addr2: %x", framebuffer_addr);
+    // framebuffer = &framebuffer_addr;
+
+    return 0;
+}
+
 
 // Set a video mode
-uint32_t vbe_set_mode(uint16_t width, uint16_t height, uint8_t bpp) {
+uint32_t vbe_set_mode2(uint16_t width, uint16_t height, uint8_t bpp) {
     // Get mode list from vbe_info
     uint16_t* mode_list = (uint16_t*)(vbe_info->video_modes & 0xFFFF);
     uint16_t target_mode = 0x4118;
@@ -518,9 +546,9 @@ int vbe_list_supported_modes(void) {
 
     // Step 3: Iterate through modes
     // vbe_set_text_mode();
-    printf("Supported VBE Modes:\n");
-    printf("Mode|WidthxHeight|BPP|Memory Model|Color Positions(R,G,B)|Framebuffer|LFB\n");
-    printf("----|-------------|----|------------|--------------------|------------|----\n");
+    serial_printf("Supported VBE Modes:\n");
+    serial_printf("Mode|WidthxHeight|BPP|Memory Model|Color Positions(R,G,B)|Framebuffer|LFB\n");
+    serial_printf("----|-------------|----|------------|--------------------|------------|----\n");
 
     for (i = 0; mode_list[i] != 0xFFFF; i++) {
         mode = mode_list[i];
@@ -538,7 +566,7 @@ int vbe_list_supported_modes(void) {
         res = vbe_bios_call(&bc);
         if (res != 0x004F) {
             // vbe_set_text_mode();
-            printf("Failed to get info for mode 0x%04X (AX=0x%04X)\n", mode, res);
+            serial_printf("Failed to get info for mode 0x%04X (AX=0x%04X)\n", mode, res);
             continue;
         }
 
@@ -559,7 +587,7 @@ int vbe_list_supported_modes(void) {
             mode_info->bpp<24 ||
             mode_info->width<800 ||
             mode_info->height<600 ||
-            mode_info->width>1280 ||
+            mode_info->width>1600 ||
             mode_info->height >1080
         ){
             continue;
@@ -568,29 +596,29 @@ int vbe_list_supported_modes(void) {
 
         // Print mode details
         // vbe_set_text_mode();
-        printf("%04X|%dx",
+        serial_printf("%04x|%dx",
             mode,
             mode_info->width,
             mode_info->width
         );
-        printf("%d|%d|",
+        serial_printf("%d|%d|",
             mode_info->height,
             mode_info->bpp
         );
-        printf("%s|%d,",
+        serial_printf("%s|%d,",
             mode_info->memory_model == 4 ? "PP" : mode_info->memory_model == 6 ? "DC" : "Unknown",// packed pixle / direct color
             mode_info->red_position
         );
-        printf("%d,%d|",
+        serial_printf("%d,%d|",
             mode_info->green_position,
             mode_info->blue_position
         );
-        printf("%04X|%s>",
+        serial_printf("%04x|%s>",
             mode_info->framebuffer>>16,
             lfb_supported ? "Yes" : "No"
         );
-        if(j++%2)
-            printf("\n");
+        // if(j++%2)
+            serial_printf("\n");
 
         // printf("0x%04X|%ux%u|%u|%s|%u,%u,%u|0x%08X|%s\n",
         //     mode,

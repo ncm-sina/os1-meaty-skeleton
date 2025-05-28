@@ -20,7 +20,7 @@ extern struct idt_entry idt[256];  // Expose idt array
 extern struct idt_descriptor idt_desc; // Declare as extern for global access
 
 
-void idt_init(void);
+int idt_init(void);
 void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags);
 void isr_handler(uint32_t vector, uint32_t error_code);
 #endif

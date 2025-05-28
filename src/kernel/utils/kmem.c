@@ -27,7 +27,7 @@ static inline uint32_t align_size(uint32_t size) {
 
 
 // Initialize the heap
-void init_heap(uint32_t heap_start_addr) {
+int init_heap(uint32_t heap_start_addr) {
     // Ignore heap_start since we're using a static array
     (void)heap_start_addr;
     
@@ -38,7 +38,8 @@ void init_heap(uint32_t heap_start_addr) {
     heap_start->next = NULL;
     heap_start->prev = NULL;
     
-    printf("Heap initialized: start=%08x, size=0x%08x\n", heap_start, HEAP_SIZE);
+    serial_printf("Heap initialized: start=%08x, size=0x%08x\n", heap_start, HEAP_SIZE);
+    return 0;
 }
 
 // Allocate memory

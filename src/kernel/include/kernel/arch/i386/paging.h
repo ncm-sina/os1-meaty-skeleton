@@ -135,7 +135,7 @@ extern uint32_t last_pagetable_idx;
 // Function declarations
 void enable_paging(page_directory_t* kernel_pagedir);
 void init_paging_stage1(multiboot_info_t* mbi);
-void init_paging_stage2(multiboot_info_t* mbi);
+int init_paging_stage2(multiboot_info_t* mbi);
 void switch_page_directory(uint32_t* new_pagedir_phys);
 uint32_t* get_current_page_directory(void);
 uint32_t* get_pagedir_virtaddr(uint32_t phys_addr);

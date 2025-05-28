@@ -53,6 +53,7 @@ process/syscalls.o \
 misc/syscalls.o \
 utils/bmp.o \
 utils/kmem.o \
+utils/klog.o \
 basic_tests.o \
 syscall.o \
 

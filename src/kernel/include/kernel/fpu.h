@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 // Enable the FPU
-void enable_fpu(void);
+int enable_fpu(void);
 
 // Disable the FPU (for testing or power-saving, not typically needed)
 void disable_fpu(void);

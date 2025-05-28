@@ -160,12 +160,13 @@ static void keyboard_handle_scancode(uint8_t scancode) {
 }
 
 // Initialize the keyboard driver
-static void keyboard_init(void) {
+static int keyboard_init(void) {
     buffer_head = 0;
     buffer_tail = 0;
     modifiers = 0;
     extended = 0;
     isr_keyboard_register_handler(keyboard_handle_scancode); // Register with ISR
+    return 0;
 }
 
 // Get the next key event from the buffer

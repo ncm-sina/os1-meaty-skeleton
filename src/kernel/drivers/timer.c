@@ -23,12 +23,13 @@ static void set_tick_hz() { // here we change tick speed from 18.2Hz to 100Hz
     outb(high_byte, 0x40);  // Send high byte to channel 0
 }
 
-static void timer_init(void) {
+static int timer_init(void) {
 
     set_tick_hz();
 
     timer_ticks = 0;
     isr_timer_register_handler(timer_handle_tick);
+    return 0;
 }
 
 static uint32_t timer_get_ticks(void) {

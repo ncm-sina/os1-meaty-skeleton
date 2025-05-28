@@ -235,27 +235,27 @@ static inline void mark_initial_used_physical_pages (multiboot_info_t* mbi){
     for (uint16_t i = 0; i< M_PHYS_P_BITMAP_MAX_SIZE; i++){
         paging_state.mapped_phys_page_bitmap[i]=0;
     }
-    printf("_kernel_end_phys: %08x ", &_kernel_end_phys);
+    serial_printf("_kernel_end_phys: %08x ", &_kernel_end_phys);
 
     uint32_t reserved_mem_end_phys_addr = ((uint32_t)&_kernel_end_phys);
-    // printf("reserved_mem_end_phys_addr1: %08x ", reserved_mem_end_phys_addr);
+    // serial_printf("reserved_mem_end_phys_addr1: %08x ", reserved_mem_end_phys_addr);
 
     // we mark all memory from start to end of last multiboot module as used and we make sure they are mapped and identity mapped
     // todo (we should only have first 1Mb identity mapped)
     uint32_t last_module_phys_addr = get_last_module_phys_addr(mbi);
-    printf("last_module_phys_addr: %08x ", last_module_phys_addr);
+    serial_printf("last_module_phys_addr: %08x ", last_module_phys_addr);
     if(last_module_phys_addr> reserved_mem_end_phys_addr){
         reserved_mem_end_phys_addr = last_module_phys_addr;
     }
-    printf("reserved_mem_end_phys_addr: %08x ", reserved_mem_end_phys_addr);
+    serial_printf("reserved_mem_end_phys_addr: %08x ", reserved_mem_end_phys_addr);
     uint32_t reserved_mem_end_page = (reserved_mem_end_phys_addr + 2*PAGE_SIZE - 1) / PAGE_SIZE;
-    printf("reserved end page: %08x ", reserved_mem_end_page);
+    serial_printf("reserved end page: %08x ", reserved_mem_end_page);
 
     for(uint32_t i=0; i< reserved_mem_end_page ; i++){
         paging_state.mapped_phys_page_bitmap[i/32] |= (1 << (i % 32));
     }
 
-    printf(" mapped_phys_page_bitmap: %08x ", paging_state.mapped_phys_page_bitmap);
+    serial_printf(" mapped_phys_page_bitmap: %08x ", paging_state.mapped_phys_page_bitmap);
 }
 
 
@@ -452,7 +452,7 @@ void init_paging_stage1(multiboot_info_t* mbi) {
 
 
 
-void init_paging_stage2(multiboot_info_t* mbi) {
+int init_paging_stage2(multiboot_info_t* mbi) {
     // last_pagetable_idx=0;
     // calculate_total_pages(mbi);
 
@@ -503,6 +503,7 @@ void init_paging_stage2(multiboot_info_t* mbi) {
     //         pagedirs[i][j]=0;
     //     }
     // }
+    return 0;
 }
 
 // static inline uint32_t* get_pagetable_phys_byidx(int pt_idx){

@@ -30,7 +30,7 @@
 #include <kernel/fs/vfs.h>
 
 #include <kernel/utils/bmp.h>
-
+#include <kernel/utils/klog.h>
 #include <kernel/kernel-base.h>
 
 #include <stdio.h>
@@ -115,14 +115,68 @@ static void init_graphics(){
 
 }
 
-static void init_drivers(){
-    serial_printf(" init drivers\n");
-    idt_init();
-    serial_init();
-    timer_drv.init();
-    ide_init();
-    keyboard_drv.init();    
-    init_graphics();
+static int init_drivers(){
+
+    if(serial_init() != 0){
+        const char *msg = " * -- serial init failed";
+        serial_printf("%s\n", msg);
+        logger->error(msg);
+    }else{
+        const char *msg = " * -- serial init done";
+        serial_printf("%s\n", msg);
+        logger->success(msg);
+    }
+
+    if(timer_drv.init() != 0){
+        const char *msg = " * -- timer init failed";
+        serial_printf("%s\n", msg);
+        logger->error(msg);
+    }else{
+        const char *msg = " * -- timer init done";
+        serial_printf("%s\n", msg);
+        logger->success(msg);
+    }
+
+    if(ide_init() != 0){
+        const char *msg = " * -- ide failed";
+        serial_printf("%s\n", msg);
+        logger->error(msg);
+    }else{
+        const char *msg = " * -- ide done";
+        serial_printf("%s\n", msg);
+        logger->success(msg);
+    }
+
+    if(keyboard_drv.init() != 0){
+        const char *msg = " * -- keyboard init failed";
+        serial_printf("%s\n", msg);
+        logger->error(msg);
+    }else{
+        const char *msg = " * -- keyboard init done";
+        serial_printf("%s\n", msg);
+        logger->success(msg);
+    }
+
+    int32_t res,res2, res3;
+
+    if(vbe_init() < 0){
+        const char *msg = " * -- vbe init failed";
+        serial_printf("%s\n", msg);
+        logger->error(msg);
+    }else{
+        const char *msg = " * -- vbe init done";
+        serial_printf("%s\n", msg);
+        logger->success(msg);
+    }
+
+    // if((res = vbe_init()) <0){
+    //     if(res2 = vbe_set_text_mode()) serial_printf("5error setting text mode err:%08x err2: %d \n", res2, res2);
+    //     serial_printf("error init graph can't use os : %08x %d", res, res);
+    //     // return;
+    // }
+
+    // init_graphics();
+    return 0;
 }
 
 // Example usage in your kernel
@@ -232,25 +286,6 @@ void test_ide_write(void) {
     // }
 }
 
-// void test_mbr_parse(void) {
-//     block_dev_t *dev = ide_get_block_dev();
-//     if (!dev) {
-//         serial_printf("No IDE device\n");
-//         return;
-//     }
-//     uint32_t fat32_lba, fat32_size;
-//     if (mbr_parse(dev, &fat32_lba, &fat32_size) == 0) {
-//         serial_printf("FAT32 partition: LBA %u, Size %u sectors\n", fat32_lba, fat32_size);
-//         // Initialize FAT32
-//         fat32_fs_t fs;
-//         if (fat32_init(&fs, fat32_lba) == 0) {
-//             serial_printf("Listing root directory:\n");
-//             fat32_list_dir(&fs, fs.bpb.root_cluster);
-//         }
-//     } else {
-//         serial_printf("Failed to parse MBR or find FAT32 partition\n");
-//     }
-// }
 
 // Test function for serial_printf
 void serial_printf_test(void) {
@@ -465,20 +500,6 @@ void serial_printf_test(void) {
     serial_printf("test 50 - [-42 0x1ff end 0x00001234]:[%d %#x %s %p]\n", num1, unum1, str, ptr);
 }
 
-// void dir_list_test(){
-//     int fd = open("/", O_RDONLY, 0);
-//     if (fd < 0) {
-//         printf("Failed to open /\n");
-//         return 1;
-//     }
-
-//     struct dirent entry;
-//     while (readdir(fd, &entry) > 0) {
-//         printf("%s: %s\n", entry.d_type == DT_DIR ? "DIR" : "FILE", entry.d_name);
-//     }
-
-//     close(fd);    
-// }
 
 int fs_init(void) {
     struct block_dev *dev = ide_get_block_dev();
@@ -520,72 +541,137 @@ void test_filesystem(){
     vfs_closedir(dir);    
 }
 
+
 // Kernel initialization
 static void kernel_init(multiboot_info_t* mbi) {
     _mbi = mbi;
     _hide_cursor();
+    vga_clear();
+    printf("Booting MyOS ... \n");
+
+    if(logger_init() != 0){
+        const char *msg = " * logger init failed";
+        serial_printf("%s\n", msg);
+        logger->error(msg);
+    }else{
+        const char *msg = " * logger init done";
+        serial_printf("%s\n", msg);
+        logger->success(msg);
+    }
+
     // stdio_init();
-    // init_gdt();
-    init_paging_stage2(_mbi);
-    // Initialize IDT (sets up exceptions and IRQs)
-    init_heap(0); // the parameter is heap_start which is ignored based on current implementation
-    enable_fpu();
-    load_multiboot_mods(_mbi);
-    init_drivers();
-
-    if (vfs_init() != 0) {
-        serial_printf("VFS init failed\n");
-        return;
-    }
-
-    if (fs_init() != 0) {
-        serial_printf("Filesystem init failed\n");
-        return;
+    
+    if(init_paging_stage2(_mbi) != 0){
+        const char *msg = " * init paging 2 failed";
+        serial_printf("%s\n", msg);
+        logger->error(msg);
+    }else{
+        const char *msg = " * init paging 2 done";
+        serial_printf("%s\n", msg);
+        logger->success(msg);
     }
 
 
-    test_filesystem();
+    // the parameter is heap_start which is ignored based on current implementation
+    if(init_heap(0) != 0){
+        const char *msg = " * init heap failed";
+        serial_printf("%s\n", msg);
+        logger->error(msg);
+    }else{
+        const char *msg = " * init heap done";
+        serial_printf("%s\n", msg);
+        logger->success(msg);
+    }
 
-    // init_processes();
+    if(enable_fpu() != 0){
+        const char *msg = " * enable fpu failed";
+        serial_printf("%s\n", msg);
+        logger->error(msg);
+    }else{
+        const char *msg = " * enable fpu done";
+        serial_printf("%s\n", msg);
+        logger->success(msg);
+    }
 
-    // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
-    // serial_puts("Hello, Serial Port!\n");
-    // test_ide_write();
-    // test_mbr_parse();
-    // dir_list_test();
-    // serial_printf_test();
-    // serial_printf("Debug: int=%d, str=%s, hex=%x, char=%c\n", 42, "test", 0xdeadbeef, 'A');
-    // block_dev_t *dev = ide_get_block_dev();
-    // serial_printf(" 1 ");
-    // uint8_t buffer[512];
-    // dev->read_sectors(0, buffer, 1);
-    // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
-    // printf("MBR: %02x %02x\n", buffer[510], buffer[511]);    
-    // serial_printf("MBR: %x %x\n", buffer[510], buffer[511]);
-    while(1);
-    // print_module_info(mbi);
-    // draw_background(mbi);
-    // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
-    uint32_t tmpcolor;
-    // vbe_set_fg_color(0xFF,0xFF ,0xFF );
-    vbe_set_fg_color(0x0, 0xff, 0xff);
-    printf2("0");
+    if(load_multiboot_mods(_mbi) != 0){
+        const char *msg = " * load multiboot mods failed";
+        serial_printf("%s\n", msg);
+        logger->error(msg);
+    }else{
+        const char *msg = " * load multiboot mods done";
+        serial_printf("%s\n", msg);
+        logger->success(msg);
+    }
 
-    // vbe_clear_screen(0xFFFF00/*, &tmp_vbe_minfo*/);
-    // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
-    // print_multiboot_info(_mbi);
-    // printf("fb_addr: %08x width: %d height: %d pitch: %d bpp: %d ", framebuffer.fb_addr, framebuffer.width, framebuffer.height, framebuffer.pitch, framebuffer.bpp);
-    while(1);
-    
-    
-    mouse_drv.init(1024,768);
-    mouse_drv.set_speed(20); // Faster movement
-    mouse_drv.set_resolution(1); // 2 counts/mm
-    mouse_drv.set_sample_rate(100); // 100 Hz    
-    mouse_drv.disable_mouse();
-    mouse_drv.enable_mouse();
-    while(1);
+    if(idt_init() != 0){
+        const char *msg = " * idt init failed";
+        serial_printf("%s\n", msg);
+        logger->error(msg);
+    }else{
+        const char *msg = " * idt init done";
+        serial_printf("%s\n", msg);
+        logger->success(msg);
+    }
 
+
+    if(init_drivers() != 0){
+        const char *msg = " * init drivers failed";
+        serial_printf("%s\n", msg);
+        logger->error(msg);
+    }else{
+        const char *msg = " * init drivers done";
+        serial_printf("%s\n", msg);
+        logger->success(msg);
+    }
+
+    if(vfs_init() != 0){
+        const char *msg = " * VFS init failed";
+        serial_printf("%s\n", msg);
+        logger->error(msg);
+    }else{
+        const char *msg = " * VFS init done";
+        serial_printf("%s\n", msg);
+        logger->success(msg);
+    }
+
+    // vbe_set_fg_color(0x0, 0xff, 0xff);
+    // printf2("0");
+
+    if(fs_init() != 0){
+        const char *msg = " * fs Init failed";
+        serial_printf("%s\n", msg);
+        logger->error(msg);
+    }else{
+        const char *msg = " * fs Init done";
+        serial_printf("%s\n", msg);
+        logger->success(msg);
+    }
+
+
+    // // vbe_list_supported_modes();
+    // int res;
+    // res = vbe_set_mode(0x418e); //0x4xxx the 4000 is to enable LFB
+    // if( res != 0){
+    //     const char *msg = " * vbe set mode failed";
+    //     serial_printf("%s ,res: %d \n", msg, res);
+    //     logger->error(msg);
+    // }else{
+    //     const char *msg = " * vbe set mode done";
+    //     serial_printf("%s\n", msg);
+    //     logger->success(msg);
+    // }
+
+    // test_filesystem();
+
+    if(init_process() != 0){
+        const char *msg = " * init processes failed";
+        serial_printf("%s\n", msg);
+        logger->error(msg);
+    }else{
+        const char *msg = " * init processes done";
+        serial_printf("%s\n", msg);
+        logger->success(msg);
+    }
 
 }
 
@@ -593,24 +679,11 @@ static void kernel_init(multiboot_info_t* mbi) {
 void kernel_main(multiboot_info_t* _mbi) {
     kernel_init(_mbi);
 
-    
-    show_processes(0, 10); // Show first 10 processes
-
-    b_test_mouse();
-    // b_test_isr_driver();
-    // b_test_idt();
-    // b_test_mbi(_mbi);
-    // b_test_mconio();
-    // b_test_mconio_scroll();    
-    // b_test_a20();
-    // b_test_multiboot_header();
-    // b_test_cupid();
-    // b_test_mconio();
-    // // b_test_mconio_scroll();    
-    // // b_test_a20();
-    // // b_test_multiboot_header();
-    // b_test_cupid();
-
+    int16_t retCode;
+    retCode = execute("/sbin/init.elf");
+    if(retCode != 0){
+        serial_printf("\ninit exited with error!\n");
+    }
 
     halt();      // while(1);
 }
