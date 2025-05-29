@@ -16,19 +16,19 @@ static struct vfs_node *root;
 static struct fd_entry fd_table[MAX_FDS];
 
 int vfs_init(void) {
-    serial_printf(" 1 ");    
+    // serial_printf(" 1 ");    
     root = kmalloc(sizeof(struct vfs_node));
-    serial_printf(" 2 ");    
+    // serial_printf(" 2 ");    
     if (!root) return -ENOMEM;
-    serial_printf(" 3 ");    
+    // serial_printf(" 3 ");    
     root->name[0] = '\0';
     root->type = VFS_DIR;
     root->ops = NULL;
     root->cluster = 0;
     root->private_data = NULL;
-    serial_printf(" 4 ");    
+    // serial_printf(" 4 ");    
     memset(fd_table, 0, sizeof(fd_table));
-    serial_printf(" 5 ");    
+    // serial_printf(" 5 ");    
     return 0;
 }
 
@@ -41,12 +41,14 @@ int vfs_mount(const char *path, struct file_operations *ops, void *private_data)
 }
 
 static struct vfs_node *vfs_lookup(struct vfs_node *dir, const char *name) {
+    // serial_printf(" d:%s vfs_node:%s %d ", name, dir->name, dir->type);
     if (dir->type != VFS_DIR || !dir->ops->readdir) return NULL;
-
+    // serial_printf(" vl1 ");
     struct vfs_dir dir_stream = { .node = dir, .index = 0, .private_data = NULL };
     struct dirent entry;
     while (dir->ops->readdir(dir, &entry, &dir_stream.index)) {
-        if (strcmp(entry.d_name, name) == 0) {
+        // serial_printf(" vl2 r: %s\n", entry.d_name);
+        if (stricmp(entry.d_name, name) == 0) {
             struct vfs_node *node = kmalloc(sizeof(struct vfs_node));
             if (!node) return NULL;
             strncpy(node->name, entry.d_name, 255);
@@ -63,42 +65,45 @@ static struct vfs_node *vfs_lookup(struct vfs_node *dir, const char *name) {
 
 
 static struct vfs_node *vfs_resolve_path(const char *pathname) {
-    serial_printf(" q ");
+    // serial_printf(" q ");
     if (!root->ops || !root->ops->readdir) return NULL;
-    serial_printf(" w ");
+    // serial_printf(" w ");
 
     // Handle root
     if (strcmp(pathname, "/") == 0 || pathname[0] == '\0') {
         return root;
     }
-    serial_printf(" e ");
+    // serial_printf(" e ");
 
     // Basic path parsing (e.g., /usr)
     char path_copy[MAX_PATH];
     strncpy(path_copy, pathname, MAX_PATH - 1);
     path_copy[MAX_PATH - 1] = '\0';
-    serial_printf(" r ");
+    // serial_printf(" r:path_copy:%s \n", path_copy);
 
     // Skip leading /
     char *component = path_copy;
     if (component[0] == '/') component++;
-    serial_printf(" t ");
+    // serial_printf(" t ");
 
     struct vfs_node *current = root;
     char *next_slash;
     while ((next_slash = strchr(component, '/'))) {
         *next_slash = '\0'; // Isolate component
+        // serial_printf(" c:%s ", component);
         current = vfs_lookup(current, component);
-        if (!current) return NULL;
+        if (!current){
+            return NULL;
+        }
         component = next_slash + 1;
     }
-    serial_printf(" y ");
+    // serial_printf(" y ");
 
     // Handle final component
     if (*component) {
         current = vfs_lookup(current, component);
     }
-    serial_printf(" u ");
+    // serial_printf(" u ");
 
     return current;
 }
@@ -189,20 +194,20 @@ int vfs_access(const char *pathname, int mode) {
 
 struct vfs_dir *vfs_opendir(const char *pathname) {
     struct vfs_node *node = vfs_resolve_path(pathname);
-    serial_printf(" m:%s, %s, %d, %d", pathname, node->name, node->cluster, node->type);
+    // serial_printf(" m:%s, %s, %d, %d", pathname, node->name, node->cluster, node->type);
     if (!node || !node->ops || !node->ops->readdir || node->type != VFS_DIR) {
-        serial_printf(" n ");
+        // serial_printf(" n ");
         if (node) kfree(node);
         return NULL;
     }
     struct vfs_dir *dir = kmalloc(sizeof(struct vfs_dir));
-    serial_printf(" k ");
+    // serial_printf(" k ");
     if (!dir) {
-        serial_printf(" v ");
+        // serial_printf(" v ");
         kfree(node);
         return NULL;
     }
-    serial_printf(" h ");
+    // serial_printf(" h ");
     dir->node = node;
     dir->index = 0;
     dir->private_data = NULL;

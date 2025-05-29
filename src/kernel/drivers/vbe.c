@@ -587,7 +587,7 @@ int vbe_list_supported_modes(void) {
             mode_info->bpp<24 ||
             mode_info->width<800 ||
             mode_info->height<600 ||
-            mode_info->width>1600 ||
+            mode_info->width>1920 ||
             mode_info->height >1080
         ){
             continue;
@@ -750,9 +750,9 @@ int vbe_is_text_mode(void) {
 // Draw a pixel
 void vbe_draw_pixel(uint16_t x, uint16_t y, uint32_t color) {
     if(x >= mode_info->width || x < 0 || y>=mode_info->height || y<0){
-        if(vbe_set_text_mode()) printf("5error setting text mode err\n");
-        printf("err fb:%08x w:%08x h:%08x x:%d y:%d color:%08x", mode_info->framebuffer, mode_info->width, mode_info->height, x,y,color );
-        while(1);
+        // if(vbe_set_text_mode()) printf("5error setting text mode err\n");
+        // printf("err fb:%08x w:%08x h:%08x x:%d y:%d color:%08x", mode_info->framebuffer, mode_info->width, mode_info->height, x,y,color );
+        // while(1);
         return;
     }
     uint8_t *fb = (uint8_t *)(uintptr_t)mode_info->framebuffer;

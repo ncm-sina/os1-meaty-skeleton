@@ -203,9 +203,10 @@ void display_image(const uint8_t *bmp_buffer, uint32_t buffer_size) {
     }
 }
 
-static void draw_background(multiboot_info_t* mbi){
+static void draw_background(multiboot_info_t* mbi, const char *bgPath){
     multiboot_module_t *mod = 0;
-    mod = get_multiboot_mod_by_name(mbi, "the-skeleton.bmp");
+    // serial_printf("\n bgpath:%s \n", bgPath);
+    mod = get_multiboot_mod_by_name(mbi, bgPath);
     if (mod->mod_start >= mod->mod_end) {
         printf("Invalid module\n");
         return;
@@ -522,14 +523,11 @@ void test_filesystem(){
 
     // Kernel-space ls test
     struct vfs_dir *dir;
-    // dir = vfs_opendir("/usr");
-    // if (!dir) {
-    //     serial_printf("opendir /usr failed\n");
-    //     return;
-    // }
-    dir = vfs_opendir("/");
+    const char *path = "/usr/lib";
+    // serial_printf("will open: %s\n", path);
+    dir = vfs_opendir(path);
     if (!dir) {
-        serial_printf("opendir / failed\n");
+        serial_printf("opendir %s failed. dir:%x \n", path, dir);
         return;
     }
 
@@ -648,21 +646,6 @@ static void kernel_init(multiboot_info_t* mbi) {
     }
 
 
-    // // vbe_list_supported_modes();
-    // int res;
-    // res = vbe_set_mode(0x418e); //0x4xxx the 4000 is to enable LFB
-    // if( res != 0){
-    //     const char *msg = " * vbe set mode failed";
-    //     serial_printf("%s ,res: %d \n", msg, res);
-    //     logger->error(msg);
-    // }else{
-    //     const char *msg = " * vbe set mode done";
-    //     serial_printf("%s\n", msg);
-    //     logger->success(msg);
-    // }
-
-    // test_filesystem();
-
     if(init_process() != 0){
         const char *msg = " * init processes failed";
         serial_printf("%s\n", msg);
@@ -673,17 +656,52 @@ static void kernel_init(multiboot_info_t* mbi) {
         logger->success(msg);
     }
 
+    test_filesystem();
+
+    // uint32_t j=0;
+    // for(int32_t i=0;i<0xfffffff; i++){
+    //     j=i*2;
+    //     j++;
+    //     asm volatile("pause");
+    // }
+
+    // vbe_list_supported_modes();
+    // serial_printf("\n vvv \n");
+    int res;
+    //0x4xxx the 4000 is to enable LFB
+    // res = vbe_set_mode(0x4118); // 1024x768
+    // res = vbe_set_mode(0x418e); // 1280x720
+    // res = vbe_set_mode(0x4191); // 1920x1080
+    res = vbe_set_mode(0x4194); // 1600x900
+    if( res != 0){
+        const char *msg = " * vbe set mode failed";
+        serial_printf("%s ,res: %d \n", msg, res);
+        logger->error(msg);
+    }else{
+        const char *msg = " * vbe set mode done";
+        serial_printf("%s\n", msg);
+        logger->success(msg);
+    }
+
+    const char *r_1024_768[] = {"the-skeleton.bmp", NULL};
+    const char *r_1600_900[] = {"bg-1600_900.bmp", NULL};
+    const char *r_1920_1080[] = {"bg-1920_1080.bmp", NULL};
+    
+    // get_resolution_bg(118)[0];
+    // serial_printf(" bg: %s \n", r_1920_1080[0]);
+    draw_background(mbi, r_1600_900[0]);
+
 }
 
 // Kernel main function
 void kernel_main(multiboot_info_t* _mbi) {
     kernel_init(_mbi);
 
-    int16_t retCode;
-    retCode = execute("/sbin/init.elf");
-    if(retCode != 0){
-        serial_printf("\ninit exited with error!\n");
-    }
+    // int16_t retCode;
+    // retCode = execute("/sbin/init.elf");
+    // if(retCode != 0){
+    //     serial_printf("\ninit exited with error!\n");
+    // }
 
     halt();      // while(1);
 }

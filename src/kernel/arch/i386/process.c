@@ -1,24 +1,312 @@
+// #include <kernel/process.h>
+// #include <kernel/arch/i386/paging.h>
+// #include <stdio.h>
+// #include <string.h>
+// #include <kernel/drivers/vbe.h>
+// #include <kernel/drivers/serial.h>
+
 #include <kernel/process.h>
-#include <kernel/arch/i386/paging.h>
+#include <kernel/binfmt/elf.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include <kernel/drivers/vbe.h>
+// #include <memory.h>
 #include <kernel/drivers/serial.h>
 
 
 #define MAX_MOD_SIZE 0xFFFFF
 
 extern uint32_t pagedir[1024];
-extern vbe_info_block_t* vbe_info;
-extern vbe_mode_info_t* mode_info;
+// extern vbe_info_block_t* vbe_info;
+// extern vbe_mode_info_t* mode_info;
 
 
+ProcessState process_state;
+Process *current_process;
 
-ProcessState process_state = {
-    .process_table = {{0}},
-    .next_pid = 1,
-    .current_pid = 0
-};
+// ProcessState process_state = {
+//     .process_table = {{0}},
+//     .next_pid = 1,
+//     .current_pid = 0
+// };
+
+// Internal helpers
+static int fileLoaded(binary_info_t *bin_info) {
+    return bin_info->start_addr != 0 && bin_info->end_addr > bin_info->start_addr;
+}
+
+static int elfFileLoaded(elf_info_t *elf_info) {
+    return elf_info->num_segments > 0 && elf_info->entry_point != 0;
+}
+
+// static uint32_t copy_argv_to_stack(uint32_t *stack_top, va_list args, int *argc_out) {
+//     char **argv = NULL;
+//     int argc = 0;
+
+//     va_list args_copy;
+//     va_copy(args_copy, args);
+//     while (va_arg(args_copy, char *) != NULL) {
+//         argc++;
+//     }
+//     va_end(args_copy);
+
+//     if (argc > 0) {
+//         argv = kmalloc(argc * sizeof(char *));
+//         va_list args_copy2;
+//         va_copy(args_copy2, args);
+//         for (int i = 0; i < argc; i++) {
+//             const char *arg = va_arg(args_copy2, char *);
+//             uint32_t len = strlen(arg) + 1;
+//             uint32_t phys_addr = allocate_physical_pages(len);
+//             map_pages(current_process->page_dir, *stack_top - len, phys_addr, len, USER_READ_WRITE);
+//             memcpy((void *)phys_addr, arg, len);
+//             argv[i] = (char *)(*stack_top - len);
+//             *stack_top -= len;
+//         }
+//         va_end(args_copy2);
+//     }
+
+//     *stack_top &= ~0xF;
+
+//     for (int i = argc - 1; i >= 0; i--) {
+//         *stack_top -= sizeof(char *);
+//         map_pages(current_process->page_dir, *stack_top, allocate_physical_pages(sizeof(char *)), sizeof(char *), USER_READ_WRITE);
+//         *(char **)(*stack_top) = argv[i];
+//     }
+
+//     *stack_top -= sizeof(int);
+//     map_pages(current_process->page_dir, *stack_top, allocate_physical_pages(sizeof(int)), sizeof(int), USER_READ_WRITE);
+//     *(int *)(*stack_top) = argc;
+
+//     *stack_top -= sizeof(uint32_t);
+//     map_pages(current_process->page_dir, *stack_top, allocate_physical_pages(sizeof(uint32_t)), sizeof(uint32_t), USER_READ_WRITE);
+//     *(uint32_t *)(*stack_top) = 0;
+
+//     *argc_out = argc;
+//     if (argv) kfree(argv);
+//     return *stack_top;
+// }
+
+// void process_init() {
+//     for (uint32_t i = 0; i < MAX_PROCESSES; i++) {
+//         process_state.process_table[i].state = PROCESS_FREE;
+//         process_state.process_table[i].pid = 0;
+//         process_state.process_table[i].page_dir = NULL;
+//         process_state.process_table[i].priority = 0;
+//         process_state.process_table[i].time_slice = 0;
+//         process_state.process_table[i].kernel_esp = 0;
+//         process_state.process_table[i].regs.eax = 0;
+//         process_state.process_table[i].regs.ebx = 0;
+//         process_state.process_table[i].regs.ecx = 0;
+//         process_state.process_table[i].regs.edx = 0;
+//         process_state.process_table[i].regs.esi = 0;
+//         process_state.process_table[i].regs.edi = 0;
+//         process_state.process_table[i].regs.ebp = 0;
+//         process_state.process_table[i].regs.esp = 0;
+//         process_state.process_table[i].regs.eip = 0;
+//         process_state.process_table[i].regs.cs = 0;
+//         process_state.process_table[i].regs.ds = 0;
+//         process_state.process_table[i].regs.es = 0;
+//         process_state.process_table[i].regs.fs = 0;
+//         process_state.process_table[i].regs.gs = 0;
+//         process_state.process_table[i].regs.ss = 0;
+//         process_state.process_table[i].regs.eflags = 0;
+//     }
+//     process_state.next_pid = 1;
+//     process_state.current_pid = 0;
+// }
+
+// static int create_flat_process(binary_info_t *bin_info, va_list args) {
+//     int pid = -1;
+//     for (uint32_t i = 0; i < MAX_PROCESSES; i++) {
+//         if (process_state.process_table[i].state == PROCESS_FREE) {
+//             pid = process_state.next_pid++;
+//             process_state.process_table[i].pid = pid;
+//             break;
+//         }
+//     }
+//     if (pid == -1) return -1;
+
+//     Process *proc = &process_state.process_table[pid % MAX_PROCESSES];
+//     current_process = proc;
+
+//     proc->page_dir = allocate_page_directory();
+//     if (!proc->page_dir) return -2;
+
+//     map_kernel_space(proc->page_dir);
+
+//     map_pages(proc->page_dir, USER_CODE_ADDR, bin_info->start_addr, 
+//               bin_info->end_addr - bin_info->start_addr, USER_READ_WRITE | USER_EXEC);
+
+//     proc->state = PROCESS_READY;
+//     proc->priority = 1;
+//     proc->time_slice = 10;
+
+//     uint32_t kernel_stack_phys = allocate_physical_pages(KERNEL_STACK_SIZE);
+//     map_pages(proc->page_dir, 0xC0000000 - KERNEL_STACK_SIZE, kernel_stack_phys, KERNEL_STACK_SIZE, KERNEL_READ_WRITE);
+//     proc->kernel_esp = 0xC0000000 - sizeof(uint32_t);
+
+//     uint32_t user_stack_phys = allocate_physical_pages(USER_STACK_SIZE);
+//     uint32_t user_stack_top = USER_STACK_TOP;
+//     map_pages(proc->page_dir, user_stack_top - USER_STACK_SIZE, user_stack_phys, USER_STACK_SIZE, USER_READ_WRITE);
+
+//     int argc;
+//     user_stack_top = copy_argv_to_stack(&user_stack_top, args, &argc);
+
+//     proc->regs.eax = proc->regs.ebx = proc->regs.ecx = proc->regs.edx = 0;
+//     proc->regs.esi = proc->regs.edi = proc->regs.ebp = 0;
+//     proc->regs.esp = user_stack_top;
+//     proc->regs.eip = USER_CODE_ADDR; // Assume flat binary entry point
+//     proc->regs.cs = USER_CODE_SELECTOR | 3;
+//     proc->regs.ds = proc->regs.es = proc->regs.fs = proc->regs.gs = USER_DATA_SELECTOR | 3;
+//     proc->regs.ss = USER_DATA_SELECTOR | 3;
+//     proc->regs.eflags = 0x202;
+
+//     return pid;
+// }
+
+// static int create_elf_process(elf_info_t *elf_info, va_list args) {
+//     int pid = -1;
+//     for (uint32_t i = 0; i < MAX_PROCESSES; i++) {
+//         if (process_state.process_table[i].state == PROCESS_FREE) {
+//             pid = process_state.next_pid++;
+//             process_state.process_table[i].pid = pid;
+//             break;
+//         }
+//     }
+//     if (pid == -1) return -1;
+
+//     Process *proc = &process_state.process_table[pid % MAX_PROCESSES];
+//     current_process = proc;
+
+//     proc->page_dir = allocate_page_directory();
+//     if (!proc->page_dir) return -2;
+
+//     map_kernel_space(proc->page_dir);
+
+//     proc->state = PROCESS_READY;
+//     proc->priority = 1;
+//     proc->time_slice = 10;
+
+//     uint32_t kernel_stack_phys = allocate_physical_pages(KERNEL_STACK_SIZE);
+//     map_pages(proc->page_dir, 0xC0000000 - KERNEL_STACK_SIZE, kernel_stack_phys, KERNEL_STACK_SIZE, KERNEL_READ_WRITE);
+//     proc->kernel_esp = 0xC0000000 - sizeof(uint32_t);
+
+//     uint32_t user_stack_phys = allocate_physical_pages(USER_STACK_SIZE);
+//     uint32_t user_stack_top = USER_STACK_TOP;
+//     map_pages(proc->page_dir, user_stack_top - USER_STACK_SIZE, user_stack_phys, USER_STACK_SIZE, USER_READ_WRITE);
+
+//     int argc;
+//     user_stack_top = copy_argv_to_stack(&user_stack_top, args, &argc);
+
+//     proc->regs.eax = proc->regs.ebx = proc->regs.ecx = proc->regs.edx = 0;
+//     proc->regs.esi = proc->regs.edi = proc->regs.ebp = 0;
+//     proc->regs.esp = user_stack_top;
+//     proc->regs.eip = elf_info->entry_point;
+//     proc->regs.cs = USER_CODE_SELECTOR | 3;
+//     proc->regs.ds = proc->regs.es = proc->regs.fs = proc->regs.gs = USER_DATA_SELECTOR | 3;
+//     proc->regs.ss = USER_DATA_SELECTOR | 3;
+//     proc->regs.eflags = 0x202;
+
+//     return pid;
+// }
+
+// static int is_elf_file(const char *absPath) {
+//     uint8_t *elf_data;
+//     uint32_t elf_size;
+//     if (loadFile(absPath, &elf_data, &elf_size) != 0) {
+//         return 0;
+//     }
+//     elf_header_t *header = (elf_header_t *)elf_data;
+//     int is_elf = validate_elf(header) == 0;
+//     kfree(elf_data);
+//     return is_elf;
+// }
+
+// int execute(const char *absPath, ...) {
+//     va_list args;
+//     va_start(args, absPath);
+
+//     if (is_elf_file(absPath)) {
+//         elf_info_t elf_info = {0};
+//         int ret = load_elf(absPath, &elf_info);
+//         if (ret != 0 || !elfFileLoaded(&elf_info)) {
+//             va_end(args);
+//             return -1;
+//         }
+
+//         int pid = create_elf_process(&elf_info, args);
+//         if (pid < 0) {
+//             kfree(elf_info.segments);
+//             kfree(elf_info.phys_addrs);
+//             kfree(elf_info.sizes);
+//             va_end(args);
+//             return -2;
+//         }
+
+//         switch_to_process(pid);
+
+//         kfree(elf_info.segments);
+//         kfree(elf_info.phys_addrs);
+//         kfree(elf_info.sizes);
+//         va_end(args);
+//         return 0;
+//     } else {
+//         binary_info_t bin_info = {0};
+//         if (loadFile(absPath, (void*)&bin_info, NULL) != 0 || !fileLoaded(&bin_info)) {
+//             va_end(args);
+//             return -1;
+//         }
+
+//         int pid = create_flat_process(&bin_info, args);
+//         if (pid < 0) {
+//             va_end(args);
+//             return -2;
+//         }
+
+//         switch_to_process(pid);
+//         va_end(args);
+//         return 0;
+//     }
+// }
+
+// void switch_to_process(uint32_t pid) {
+//     Process *proc = &process_state.process_table[pid % MAX_PROCESSES];
+//     if (proc->state != PROCESS_READY && proc->state != PROCESS_RUNNING) {
+//         return;
+//     }
+
+//     if (process_state.current_pid != 0) {
+//         Process *current = &process_state.process_table[process_state.current_pid % MAX_PROCESSES];
+//         current->state = PROCESS_READY;
+//     }
+
+//     process_state.current_pid = pid;
+//     proc->state = PROCESS_RUNNING;
+
+//     asm volatile ("mov %0, %%cr3" : : "r"(proc->page_dir));
+//     asm volatile ("mov %0, %%esp" : : "r"(proc->kernel_esp));
+
+//     asm volatile (
+//         "mov %0, %%eax\n"
+//         "mov %%eax, %%ds\n"
+//         "mov %%eax, %%es\n"
+//         "mov %%eax, %%fs\n"
+//         "mov %%eax, %%gs\n"
+//         "pushl %0\n"
+//         "pushl %1\n"
+//         "pushf\n"
+//         "popl %%eax\n"
+//         "orl $0x200, %%eax\n"
+//         "pushl %%eax\n"
+//         "pushl %2\n"
+//         "pushl %3\n"
+//         "iret"
+//         :
+//         : "r"(USER_DATA_SELECTOR | 3), "r"(proc->regs.esp), "r"(USER_CODE_SELECTOR | 3), "r"(proc->regs.eip)
+//         : "eax"
+//     );
+// }
 
 // Map ProcessStateEnum to string
 static const char* process_state_to_string(ProcessStateEnum state) {
@@ -29,37 +317,6 @@ static const char* process_state_to_string(ProcessStateEnum state) {
         case PROCESS_BLOCKED:   return "BLOCKED";
         case PROCESS_TERMINATED: return "TERMINATED";
         default:                return "UNKNOWN";
-    }
-}
-
-void show_processes(int start, int count) {
-    // Validate inputs
-    if (start < 0 || start >= MAX_PROCESSES || count <= 0) {
-        serial_printf("Invalid parameters: start=%d, count=%d\n", start, count);
-        return;
-    }
-
-    // Adjust count to stay within bounds
-    if (start + count > MAX_PROCESSES) {
-        count = MAX_PROCESSES - start;
-    }
-
-    // Print header
-    serial_printf("\n PID\t PageDir \tStatus\n");
-    serial_printf("----\t ------- \t--------\n");
-
-    // Print process info
-    int printedProcesses=0;
-    for (int i = start; i<MAX_PROCESSES; i++) {
-        Process* proc = &process_state.process_table[i];
-        if(!proc || proc->pid == 0) continue;
-        printedProcesses++;
-        serial_printf("%3d\t %08X\t %s\n",
-            proc->pid,
-            proc->page_dir ? (uint32_t)proc->page_dir : 0,
-            process_state_to_string(proc->state));
-
-        if(printedProcesses>=count) break;
     }
 }
 
@@ -99,132 +356,6 @@ int init_process() {
     // Kernel process doesn't need full register state here
     return 0;
 }
-
-int execute(const char *absPath, ...) {
-    va_list args;
-    va_start(args, absPath);
-    binary_info_t bin_info = {0};
-    
-    // Load ELF file
-    int ret = load_elf(absPath, &bin_info);
-    if (ret != 0 || !fileLoaded(&bin_info)) {
-        va_end(args);
-        serial_printf("error loading file: -1\n");
-        return -1;
-    }
-
-    // Create process
-    int pid = create_process(&bin_info, args);
-    if (pid < 0) {
-        kfree(bin_info.segments);
-        kfree(bin_info.phys_addrs);
-        kfree(bin_info.sizes);
-        va_end(args);
-        return -2;
-    }
-
-    // Switch to process
-    switch_to_process(pid);
-
-    // Free bin_info resources
-    kfree(bin_info.segments);
-    kfree(bin_info.phys_addrs);
-    kfree(bin_info.sizes);
-    va_end(args);
-
-    return 0; // Success
-}
-
-// int execute(const char *absPath, ...){
-//     int16_t retCode=-1;
-//     va_list args;
-//     va_start(args, format);
-//     binary_info_t bin_info;
-//     loadFile(absPath, &bin_info);
-//     if(!fileLoaded(&bin_info)){
-//         return -1;
-//     }
-//     // creates process and stores it in process_table array
-//     // also it should copy argv strings somewhere and then push argc and **argv 
-//     // and should store _start and initial_states of the program in process so
-//     // its ready to be executed
-//     int pid = create_process(&bin_info, args); 
-//     if(pid > 0){
-//         switch_to_process(pid);
-//     }
-//     va_end(args);
-//     return retCode;
-// }
-
-// uint32_t create_process(binary_info_t* bin) {
-//     // Validate input
-//     if (!bin || bin->start_addr >= bin->end_addr) return 0;
-
-//     // Find free process slot
-//     for (int i = 0; i < MAX_PROCESSES; i++) {
-//         if (process_state.process_table[i].pid == 0) {
-//             Process* proc = &process_state.process_table[i];
-//             proc->pid = process_state.next_pid++;
-//             proc->page_dir = create_process_pd();
-//             proc->state = PROCESS_READY;
-//             proc->priority = 1;
-//             proc->time_slice = 10;
-
-//             // Calculate size and pages for binary
-//             uint32_t size = bin->end_addr - bin->start_addr;
-//             uint32_t code_pages = (size + 4095) / 4096;
-
-//             // Map code/data at 0x1000000
-//             for (uint32_t j = 0; j < code_pages; j++) {
-//                 assign_page_table(proc->page_dir, (void*)(0x1000000 + j * 4096),
-//                                  PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
-//             }
-
-//             // Copy binary to 0x1000000
-//             switch_page_directory(proc->page_dir);
-//             uint32_t* user_mem = (uint32_t*)0x1000000;
-//             for (uint32_t j = 0; j < size / 4; j++) {
-//                 user_mem[j] = ((uint32_t*)bin->start_addr)[j];
-//             }
-//             // Handle remaining bytes (if size not multiple of 4)
-//             for (uint32_t j = (size / 4) * 4; j < size; j++) {
-//                 ((uint8_t*)0x1000000)[j] = ((uint8_t*)bin->start_addr)[j];
-//             }
-
-//             switch_page_directory(pagedir);
-
-//             // Map 1MB stack at 0x13F0000-0x1400000
-//             assign_page_table(proc->page_dir, (void*)0x13F0000,
-//                              PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
-
-//             // Kernel stack (unique per process)
-//             assign_page_table(pagedir, (void*)(0xC0200000 + i * 0x4000),
-//                              PAGE_PRESENT | PAGE_WRITE);
-//             proc->kernel_esp = 0xC0200000 + i * 0x4000 + 0x4000;
-
-//             // Initialize registers
-//             proc->regs.eip = 0x1000000;
-//             proc->regs.esp = 0x1400000;
-//             proc->regs.cs = 0x1B;
-//             proc->regs.ds = 0x23;
-//             proc->regs.es = 0x23;
-//             proc->regs.fs = 0x23;
-//             proc->regs.gs = 0x23;
-//             proc->regs.ss = 0x23;
-//             proc->regs.eflags = 0x202;
-//             proc->regs.eax = 0;
-//             proc->regs.ebx = 0;
-//             proc->regs.ecx = 0;
-//             proc->regs.edx = 0;
-//             proc->regs.esi = 0;
-//             proc->regs.edi = 0;
-//             proc->regs.ebp = 0;
-            
-//             return proc->pid;
-//         }
-//     }
-//     return 0;
-// }
 
 static void print_module_info(multiboot_module_t *mod){
     serial_printf("\n mod_start: %08x | mod_end: %08x" , mod->mod_start, mod->mod_end);
@@ -287,29 +418,29 @@ void load_16bit_executer(multiboot_info_t* mbi){
     return;
 }
 
-static void load_fonts(multiboot_info_t* mbi){
-    multiboot_module_t *mod = 0;
-    mod = get_multiboot_mod_by_name(mbi, "Inconsolata-16r.psf");
-    serial_printf("\n");
-    print_module_info(mod);
-    serial_printf("\n");
-    if (mod->mod_start >= mod->mod_end) {
-        serial_printf("Invalid module\n");
-        return;
-    }
+// static void load_fonts(multiboot_info_t* mbi){
+//     multiboot_module_t *mod = 0;
+//     mod = get_multiboot_mod_by_name(mbi, "Inconsolata-16r.psf");
+//     serial_printf("\n");
+//     print_module_info(mod);
+//     serial_printf("\n");
+//     if (mod->mod_start >= mod->mod_end) {
+//         serial_printf("Invalid module\n");
+//         return;
+//     }
 
-    memset(mode_info,0,0x200);
-    memset(vbe_info,0,0x200);
-    memcpy(mode_info, (void *)_mbi->vbe_mode_info, sizeof(vbe_mode_info_t));
-    memcpy(vbe_info, (void *)_mbi->vbe_control_info, sizeof(vbe_info_block_t));
+//     memset(mode_info,0,0x200);
+//     memset(vbe_info,0,0x200);
+//     memcpy(mode_info, (void *)_mbi->vbe_mode_info, sizeof(vbe_mode_info_t));
+//     memcpy(vbe_info, (void *)_mbi->vbe_control_info, sizeof(vbe_info_block_t));
 
-    vbe_load_font(mod->mod_start);
-}
+//     vbe_load_font(mod->mod_start);
+// }
 
 int load_multiboot_mods(multiboot_info_t* mbi) {
     // get 16bit-executer.mod info
     load_16bit_executer(mbi);
-    load_fonts(mbi);
+    // load_fonts(mbi);
 
     // }else{
     //     serial_printf("Module %s not found2\n", name);
@@ -326,36 +457,36 @@ int load_multiboot_mods(multiboot_info_t* mbi) {
 //     }
 // }
 
-void switch_to_process(uint32_t pid) {
-    for (int i = 0; i < MAX_PROCESSES; i++) {
-        if (process_state.process_table[i].pid == pid && process_state.process_table[i].state == PROCESS_READY) {
-            Process* proc = &process_state.process_table[i];
-            process_state.current_pid = i;
-            proc->state = PROCESS_RUNNING;
-            switch_page_directory(proc->page_dir);
+// void switch_to_process(uint32_t pid) {
+//     for (int i = 0; i < MAX_PROCESSES; i++) {
+//         if (process_state.process_table[i].pid == pid && process_state.process_table[i].state == PROCESS_READY) {
+//             Process* proc = &process_state.process_table[i];
+//             process_state.current_pid = i;
+//             proc->state = PROCESS_RUNNING;
+//             switch_page_directory(proc->page_dir);
 
-            switch_to_process_asm(&proc->regs);
+//             switch_to_process_asm(&proc->regs);
             
-        }
-    }
-}
+//         }
+//     }
+// }
 
-void schedule() {
-    Process* current = &process_state.process_table[process_state.current_pid];
-    if (current->state == PROCESS_RUNNING) {
-        current->state = PROCESS_READY;
-    }
+// void schedule() {
+//     Process* current = &process_state.process_table[process_state.current_pid];
+//     if (current->state == PROCESS_RUNNING) {
+//         current->state = PROCESS_READY;
+//     }
 
-    uint32_t next_pid = (process_state.current_pid + 1) % MAX_PROCESSES;
-    while (process_state.process_table[next_pid].state != PROCESS_READY && 
-           next_pid != process_state.current_pid) {
-        next_pid = (next_pid + 1) % MAX_PROCESSES;
-    }
-    if (next_pid == process_state.current_pid) return;
+//     uint32_t next_pid = (process_state.current_pid + 1) % MAX_PROCESSES;
+//     while (process_state.process_table[next_pid].state != PROCESS_READY && 
+//            next_pid != process_state.current_pid) {
+//         next_pid = (next_pid + 1) % MAX_PROCESSES;
+//     }
+//     if (next_pid == process_state.current_pid) return;
 
-    Process* next = &process_state.process_table[next_pid];
-    process_state.current_pid = next_pid;
-    next->state = PROCESS_RUNNING;
-    switch_page_directory(next->page_dir);
-    schedule_asm(&next->regs);
-}
+//     Process* next = &process_state.process_table[next_pid];
+//     process_state.current_pid = next_pid;
+//     next->state = PROCESS_RUNNING;
+//     switch_page_directory(next->page_dir);
+//     schedule_asm(&next->regs);
+// }

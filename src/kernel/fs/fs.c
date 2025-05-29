@@ -1,83 +1,66 @@
-#include <errno.h>
-#include <arch/i386/bits/syscall.h>
+#include <kernel/fs/fs.h>
+#include <memory.h>
+#include <string.h>
+#include <kernel/process.h>
 
-// // VFS stubs (your OS provides these)
-// struct file;
-// struct inode;
-// struct stat;
+/* Simulated ramdisk structure (replace with your actual filesystem) */
+typedef struct {
+    const char *path;
+    uint8_t *data;
+    uint32_t size;
+} RamdiskEntry;
 
-// int vfs_open(const char *path, int flags, int mode, struct file **file);
-// int vfs_read(struct file *file, char *buf, size_t count, size_t *bytes);
-// int vfs_write(struct file *file, const char *buf, size_t count, size_t *bytes);
-// int vfs_close(struct file *file);
-// int vfs_lseek(struct file *file, off_t offset, unsigned int origin, off_t *new_offset);
-// int vfs_stat(struct file *file, struct stat *statbuf);
-// int vfs_access(const char *path, int mode);
+static RamdiskEntry ramdisk[] = {
+    {"/sbin/init.elf", NULL, 0},  // Placeholder: actual data set at runtime
+    {"/sbin/shell.elf", NULL, 0}, // Placeholder
+    {"/sbin/myprog.bin", NULL, 0},// Placeholder for flat binary
+    {NULL, NULL, 0}
+};
 
-// FD table (simplified)
-#define MAX_FDS 1024
-static struct file *fd_table[MAX_FDS];
+/* Simulate reading from ramdisk (replace with real filesystem read) */
+static int ramdisk_read(const char *path, uint8_t **data, uint32_t *size) {
+    for (int i = 0; ramdisk[i].path; i++) {
+        if (strcmp(path, ramdisk[i].path) == 0) {
+            *data = ramdisk[i].data;
+            *size = ramdisk[i].size;
+            return 0;
+        }
+    }
+    return -1; // File not found
+}
 
-// long sys_open(const char *filename, int flags, int mode) {
-//     if (!filename) return -EINVAL;
-//     struct file *file;
-//     int ret = vfs_open(filename, flags, mode, &file);
-//     if (ret < 0) return ret;
+int loadFile(const char *absPath, void *data, uint32_t *size) {
+    if (!absPath || !data) return -1;
 
-//     // Find free FD
-//     int fd;
-//     for (fd = 0; fd < MAX_FDS; fd++) {
-//         if (!fd_table[fd]) {
-//             fd_table[fd] = file;
-//             return fd;
-//         }
-//     }
-//     vfs_close(file);
-//     return -EMFILE;
-// }
+    uint8_t *file_data;
+    uint32_t file_size;
+    if (ramdisk_read(absPath, &file_data, &file_size) != 0) {
+        return -2; // File not found
+    }
 
-// long sys_read(int fd, char *buf, size_t count) {
-//     if (fd < 0 || fd >= MAX_FDS || !fd_table[fd] || !buf) return -EBADF;
-//     size_t bytes;
-//     int ret = vfs_read(fd_table[fd], buf, count, &bytes);
-//     if (ret < 0) return ret;
-//     return bytes;
-// }
+    if (size) {
+        /* ELF mode: allocate memory and copy file contents */
+        *(uint8_t **)data = kmalloc(file_size);
+        if (!*(uint8_t **)data) {
+            return -3; // Out of memory
+        }
+        memcpy(*(uint8_t **)data, file_data, file_size);
+        *size = file_size;
+    } else {
+        /* Flat binary mode: allocate physical pages and map */
+        binary_info_t *bin_info = (binary_info_t *)data;
+        uint32_t phys_addr = allocate_physical_pages(file_size);
+        if (!phys_addr) {
+            return -3; // Out of memory
+        }
 
-// long sys_write(int fd, const char *buf, size_t count) {
-//     if (fd < 0 || fd >= MAX_FDS || !fd_table[fd] || !buf) return -EBADF;
-//     size_t bytes;
-//     int ret = vfs_write(fd_table[fd], buf, count, &bytes);
-//     if (ret < 0) return ret;
-//     return bytes;
-// }
+        /* Copy file data to physical memory */
+        memcpy((void *)phys_addr, file_data, file_size);
 
-// long sys_close(int fd) {
-//     if (fd < 0 || fd >= MAX_FDS || !fd_table[fd]) return -EBADF;
-//     int ret = vfs_close(fd_table[fd]);
-//     if (ret < 0) return ret;
-//     fd_table[fd] = NULL;
-//     return 0;
-// }
+        /* Update binary_info_t */
+        bin_info->start_addr = phys_addr;
+        bin_info->end_addr = phys_addr + file_size;
+    }
 
-// long sys_lseek(int fd, off_t offset, unsigned int origin) {
-//     if (fd < 0 || fd >= MAX_FDS || !fd_table[fd]) return -EBADF;
-//     off_t new_offset;
-//     int ret = vfs_lseek(fd_table[fd], offset, origin, &new_offset);
-//     if (ret < 0) return ret;
-//     return new_offset;
-// }
-
-// long sys_fstat(int fd, struct stat *statbuf) {
-//     if (fd < 0 || fd >= MAX_FDS || !fd_table[fd] || !statbuf) return -EBADF;
-//     int ret = vfs_stat(fd_table[fd], statbuf);
-//     if (ret < 0) return ret;
-//     return 0;
-// }
-
-// long sys_access(const char *pathname, int mode) {
-//     if (!pathname) return -EINVAL;
-//     int ret = vfs_access(pathname, mode);
-//     if (ret < 0) return ret;
-//     return 0;
-// }
+    return 0;
+}

@@ -1,12 +1,20 @@
-#ifndef _KERNEL_PROCESS_H
-#define _KERNEL_PROCESS_H
+#ifndef PROCESS_H
+#define PROCESS_H
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <kernel/multiboot.h>
 
 #define MAX_PROCESSES 256
+#define USER_STACK_TOP 0xBFFFFFFF // User stack top
+#define USER_STACK_SIZE 0x10000   // 64KB user stack
+#define KERNEL_STACK_SIZE 0x1000  // 4KB kernel stack
+#define USER_CODE_ADDR 0x1000     // Default code address for ELF
+#define USER_CODE_SELECTOR 0x18   // Example GDT user code selector (ring 3)
+#define USER_DATA_SELECTOR 0x20   // Example GDT user data selector (ring 3)
+
+#include <kernel/multiboot.h>
+
 
 typedef enum {
     PROCESS_FREE = 0,    // Slot is unused
@@ -64,13 +72,14 @@ extern func_ptr2_t switch_to_process_asm;
 
 extern ProcessState process_state;
 
-void show_processes(int start, int count);
+// void show_processes(int start, int count);
 int init_process();
-uint32_t create_process(binary_info_t* bin);
+int execute(const char *absPath, ...);
+void switch_to_process(uint32_t pid);
+
 multiboot_module_t* get_multiboot_mod_by_name(multiboot_info_t* mbi, const char* name);
 void load_multiboot_mod(multiboot_module_t* mod);
 int load_multiboot_mods(multiboot_info_t* mbi);
-void switch_to_process(uint32_t pid);
 void schedule();
 
 #endif
